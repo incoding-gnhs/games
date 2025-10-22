@@ -45,14 +45,6 @@ app.get('/api/mobile-games', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, `index.html`), (err) => {
-    if (err) {
-      res.status(500).send('Error');
-    }
-  });
-});
-
 // 데스크탑 게임 파일 서빙
 app.get('/desktop/:filename', (req, res) => {
   const filename = req.params.filename;
