@@ -1,0 +1,781 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1vs1 슈팅 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #gameCanvas {
+            background: #222;
+            border: 2px solid #fff;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            z-index: 100;
+        }
+        
+        #shopModal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #fff;
+            padding: 20px;
+            color: white;
+            display: none;
+            z-index: 1000;
+            max-width: 600px;
+            border-radius: 10px;
+        }
+        
+        .shop-section {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #666;
+            border-radius: 5px;
+        }
+        
+        .shop-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .shop-item:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .shop-item.owned {
+            background: rgba(0,255,0,0.2);
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #fff;
+            padding: 30px;
+            color: white;
+            display: none;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1200" height="800"></canvas>
+        
+        <div id="ui">
+            <div>라운드: <span id="roundDisplay">1</span>/11</div>
+            <div>점수: 플레이어 <span id="team1Score">0</span> - <span id="team2Score">0</span> AI</div>
+            <div>체력: <span id="healthDisplay">100</span></div>
+            <div>돈: <span id="moneyDisplay">800</span>원</div>
+            <div>무기: <span id="weaponDisplay">직사각형</span></div>
+            <div>시간: <span id="timeDisplay">120</span>초</div>
+        </div>
+        
+        <div id="shopModal">
+            <h2>상점 (Space로 닫기)</h2>
+            
+            <div class="shop-section">
+                <h3>방어구</h3>
+                <div class="shop-item" data-type="armor" data-item="basic">
+                    기초 방어구 - 350원 (체력 +25)
+                </div>
+                <div class="shop-item" data-type="armor" data-item="heavy">
+                    대형 방어구 - 750원 (체력 +50)
+                </div>
+                <div class="shop-item" data-type="armor" data-item="resilient">
+                    인내 방어구 - 550원 (체력 +25, 치명타 피해 -10%)
+                </div>
+            </div>
+            
+            <div class="shop-section">
+                <h3>주무기</h3>
+                <div class="shop-item owned" data-type="primary" data-item="rifle">
+                    길쭉한 직사각형 - 무료 (데미지: 12, 연사: 보통)
+                </div>
+                <div class="shop-item" data-type="primary" data-item="square">
+                    정사각형 - 900원 (데미지: 24, 연사: 빠름)
+                </div>
+                <div class="shop-item" data-type="primary" data-item="diamond">
+                    마름모 - 800원 (데미지: 12×2, 2발 동시발사)
+                </div>
+                <div class="shop-item" data-type="primary" data-item="star">
+                    별 모양 - 1000원 (데미지: 20, 가속탄환)
+                </div>
+                <div class="shop-item" data-type="primary" data-item="cross">
+                    십자 모양 - 900원 (데미지: 15, 벽 관통)
+                </div>
+            </div>
+        </div>
+        
+        <div id="gameOver">
+            <h2 id="gameResult">게임 종료</h2>
+            <button onclick="window.startNewGame()">새 게임</button>
+        </div>
+    </div>
+
+    <script>
+        // 글로벌 변수들
+        let canvas, ctx;
+        let walls = [];
+        let gameState = {};
+        let bullets = [];
+        let soundEffects = [];
+        let players = [];
+        let currentPlayer;
+        let keys = {};
+        let mouse = { x: 600, y: 400 };
+
+        // 게임 초기화
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // 벽 설정
+            walls = [
+                { x: 500, y: 390, width: 200, height: 20 },
+                { x: 590, y: 300, width: 20, height: 200 },
+                { x: 200, y: 200, width: 60, height: 15 },
+                { x: 200, y: 300, width: 15, height: 80 },
+                { x: 940, y: 585, width: 60, height: 15 },
+                { x: 985, y: 520, width: 15, height: 80 },
+                { x: 360, y: 560, width: 50, height: 12 },
+                { x: 840, y: 240, width: 50, height: 12 },
+                { x: 240, y: 640, width: 12, height: 50 },
+                { x: 960, y: 160, width: 12, height: 50 }
+            ];
+            
+            // 게임 상태 초기화
+            gameState = {
+                round: 1,
+                team1Score: 0,
+                team2Score: 0,
+                roundTime: 120,
+                shopOpen: false,
+                gamePhase: 'shop'
+            };
+            
+            // 플레이어 생성
+            players = [
+                createPlayer(80, 80, 1, 1),
+                createPlayer(1120, 720, 2, 2)
+            ];
+            currentPlayer = players[0];
+            
+            bullets = [];
+            soundEffects = [];
+        }
+
+        // 플레이어 생성 함수
+        function createPlayer(x, y, team, id) {
+            return {
+                x: x,
+                y: y,
+                team: team,
+                id: id,
+                radius: 15,
+                health: 100,
+                maxHealth: 100,
+                speed: 3,
+                money: 800,
+                alive: true,
+                primaryWeapon: 'rifle',
+                armor: null,
+                critReduction: 0,
+                speedBonus: 0,
+                lastShotTime: 0,
+                color: team === 1 ? '#ff4444' : '#4444ff'
+            };
+        }
+
+        // 벽 충돌 검사
+        function checkWallCollision(player, newX, newY) {
+            for (let wall of walls) {
+                if (newX - player.radius < wall.x + wall.width &&
+                    newX + player.radius > wall.x &&
+                    newY - player.radius < wall.y + wall.height &&
+                    newY + player.radius > wall.y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 플레이어 이동
+        function movePlayer(player, dx, dy) {
+            const newX = Math.max(player.radius, Math.min(1200 - player.radius, player.x + dx));
+            const newY = Math.max(player.radius, Math.min(800 - player.radius, player.y + dy));
+            
+            if (!checkWallCollision(player, newX, player.y)) {
+                player.x = newX;
+            }
+            if (!checkWallCollision(player, player.x, newY)) {
+                player.y = newY;
+            }
+        }
+
+        // 총알 생성
+        function createBullet(player, targetX, targetY, weapon) {
+            const angle = Math.atan2(targetY - player.y, targetX - player.x);
+            
+            const configs = {
+                rifle: { speed: 8, damage: 12, shape: 'rectangle', width: 4, height: 12, penetrating: false },
+                square: { speed: 6, damage: 24, shape: 'square', width: 8, height: 8, penetrating: false },
+                diamond: { speed: 8, damage: 12, shape: 'diamond', width: 6, height: 6, penetrating: false },
+                star: { speed: 3, damage: 20, shape: 'star', width: 8, height: 8, penetrating: false },
+                cross: { speed: 5, damage: 15, shape: 'cross', width: 7, height: 7, penetrating: true }
+            };
+            
+            const config = configs[weapon] || configs.rifle;
+            
+            bullets.push({
+                x: player.x + Math.cos(angle) * player.radius,
+                y: player.y + Math.sin(angle) * player.radius,
+                vx: Math.cos(angle) * config.speed,
+                vy: Math.sin(angle) * config.speed,
+                damage: config.damage,
+                owner: player.id,
+                team: player.team,
+                shape: config.shape,
+                width: config.width,
+                height: config.height,
+                angle: angle,
+                acceleration: weapon === 'star' ? 0.15 : 0,
+                penetrating: config.penetrating
+            });
+        }
+
+        // 플레이어 사격
+        function playerShoot(player) {
+            const now = Date.now();
+            if (now - player.lastShotTime < 200) return;
+            
+            player.lastShotTime = now;
+            
+            if (player.primaryWeapon === 'diamond') {
+                // 마름모는 2발
+                const angle1 = Math.atan2(mouse.y - player.y, mouse.x - player.x) - 0.2;
+                const angle2 = Math.atan2(mouse.y - player.y, mouse.x - player.x) + 0.2;
+                
+                bullets.push({
+                    x: player.x + Math.cos(angle1) * player.radius,
+                    y: player.y + Math.sin(angle1) * player.radius,
+                    vx: Math.cos(angle1) * 8,
+                    vy: Math.sin(angle1) * 8,
+                    damage: 12,
+                    owner: player.id,
+                    team: player.team,
+                    shape: 'diamond',
+                    width: 6,
+                    height: 6,
+                    angle: angle1,
+                    acceleration: 0,
+                    penetrating: false
+                });
+                
+                bullets.push({
+                    x: player.x + Math.cos(angle2) * player.radius,
+                    y: player.y + Math.sin(angle2) * player.radius,
+                    vx: Math.cos(angle2) * 8,
+                    vy: Math.sin(angle2) * 8,
+                    damage: 12,
+                    owner: player.id,
+                    team: player.team,
+                    shape: 'diamond',
+                    width: 6,
+                    height: 6,
+                    angle: angle2,
+                    acceleration: 0,
+                    penetrating: false
+                });
+            } else {
+                createBullet(player, mouse.x, mouse.y, player.primaryWeapon);
+            }
+            
+            // 사운드 이펙트
+            soundEffects.push({
+                x: player.x,
+                y: player.y,
+                radius: 40,
+                opacity: 0.6,
+                growth: 2
+            });
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            window.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    toggleShop();
+                }
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = e.clientX - rect.left;
+                mouse.y = e.clientY - rect.top;
+            });
+            
+            canvas.addEventListener('mousedown', (e) => {
+                if (gameState.gamePhase !== 'playing') return;
+                if (e.button === 0 || e.button === 2) {
+                    playerShoot(currentPlayer);
+                }
+            });
+            
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        // 상점 토글
+        function toggleShop() {
+            if (gameState.gamePhase !== 'shop') return;
+            gameState.shopOpen = !gameState.shopOpen;
+            document.getElementById('shopModal').style.display = gameState.shopOpen ? 'block' : 'none';
+        }
+
+        // 상점 이벤트 설정
+        function setupShop() {
+            document.querySelectorAll('.shop-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const type = item.dataset.type;
+                    const itemName = item.dataset.item;
+                    
+                    if (item.classList.contains('owned')) return;
+                    
+                    const prices = {
+                        basic: 350, heavy: 750, resilient: 550,
+                        square: 900, diamond: 800, star: 1000, cross: 900
+                    };
+                    
+                    const price = prices[itemName];
+                    if (!price || currentPlayer.money < price) return;
+                    
+                    currentPlayer.money -= price;
+                    
+                    if (type === 'armor') {
+                        currentPlayer.armor = itemName;
+                        const healthBonus = itemName === 'heavy' ? 50 : 25;
+                        currentPlayer.maxHealth += healthBonus;
+                        currentPlayer.health += healthBonus;
+                        if (itemName === 'resilient') currentPlayer.critReduction = 0.1;
+                    } else if (type === 'primary') {
+                        currentPlayer.primaryWeapon = itemName;
+                    }
+                    
+                    item.classList.add('owned');
+                    updateUI();
+                });
+            });
+        }
+
+        // 게임 업데이트
+        function updateGame() {
+            if (gameState.gamePhase === 'playing') {
+                // 플레이어 이동
+                let moveX = 0, moveY = 0;
+                if (keys['w']) moveY = -currentPlayer.speed;
+                if (keys['s']) moveY = currentPlayer.speed;
+                if (keys['a']) moveX = -currentPlayer.speed;
+                if (keys['d']) moveX = currentPlayer.speed;
+                
+                movePlayer(currentPlayer, moveX, moveY);
+                
+                // AI 동작
+                const aiPlayer = players[1];
+                const target = players[0];
+                
+                if (aiPlayer.alive && target.alive) {
+                    const dx = target.x - aiPlayer.x;
+                    const dy = target.y - aiPlayer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    let aiMoveX = 0, aiMoveY = 0;
+                    
+                    if (dist > 200) {
+                        aiMoveX = (dx / dist) * aiPlayer.speed * 0.7;
+                        aiMoveY = (dy / dist) * aiPlayer.speed * 0.7;
+                    } else if (dist < 120) {
+                        aiMoveX = -(dx / dist) * aiPlayer.speed * 0.5;
+                        aiMoveY = -(dy / dist) * aiPlayer.speed * 0.5;
+                    }
+                    
+                    // AI 벽 회피
+                    if (checkWallCollision(aiPlayer, aiPlayer.x + aiMoveX, aiPlayer.y + aiMoveY)) {
+                        if (!checkWallCollision(aiPlayer, aiPlayer.x + aiPlayer.speed, aiPlayer.y)) {
+                            aiMoveX = aiPlayer.speed; aiMoveY = 0;
+                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x - aiPlayer.speed, aiPlayer.y)) {
+                            aiMoveX = -aiPlayer.speed; aiMoveY = 0;
+                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x, aiPlayer.y + aiPlayer.speed)) {
+                            aiMoveX = 0; aiMoveY = aiPlayer.speed;
+                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x, aiPlayer.y - aiPlayer.speed)) {
+                            aiMoveX = 0; aiMoveY = -aiPlayer.speed;
+                        }
+                    }
+                    
+                    movePlayer(aiPlayer, aiMoveX, aiMoveY);
+                    
+                    // AI 사격
+                    if (Math.random() < 0.04 && dist < 350) {
+                        createBullet(aiPlayer, target.x, target.y, 'rifle');
+                    }
+                }
+                
+                // 총알 업데이트
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const bullet = bullets[i];
+                    
+                    // 별 모양 가속
+                    if (bullet.acceleration > 0) {
+                        const speed = Math.sqrt(bullet.vx * bullet.vx + bullet.vy * bullet.vy);
+                        const newSpeed = speed + bullet.acceleration;
+                        const direction = Math.atan2(bullet.vy, bullet.vx);
+                        bullet.vx = Math.cos(direction) * newSpeed;
+                        bullet.vy = Math.sin(direction) * newSpeed;
+                    }
+                    
+                    bullet.x += bullet.vx;
+                    bullet.y += bullet.vy;
+                    
+                    // 화면 밖 제거
+                    if (bullet.x < 0 || bullet.x > 1200 || bullet.y < 0 || bullet.y > 800) {
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // 벽 충돌 (관통 무기 제외)
+                    if (!bullet.penetrating) {
+                        let hitWall = false;
+                        for (let wall of walls) {
+                            if (bullet.x > wall.x && bullet.x < wall.x + wall.width &&
+                                bullet.y > wall.y && bullet.y < wall.y + wall.height) {
+                                hitWall = true;
+                                break;
+                            }
+                        }
+                        if (hitWall) {
+                            bullets.splice(i, 1);
+                            continue;
+                        }
+                    }
+                    
+                    // 플레이어 충돌
+                    for (let player of players) {
+                        if (player.team === bullet.team || !player.alive) continue;
+                        
+                        const dx = bullet.x - player.x;
+                        const dy = bullet.y - player.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < player.radius) {
+                            const critMultiplier = Math.max(1, 1.5 - (distance / player.radius) * 0.5);
+                            let damage = bullet.damage * critMultiplier;
+                            
+                            if (player.critReduction > 0 && critMultiplier > 1) {
+                                damage = bullet.damage + (damage - bullet.damage) * (1 - player.critReduction);
+                            }
+                            
+                            player.health -= damage;
+                            bullets.splice(i, 1);
+                            
+                            if (player.health <= 0) {
+                                player.alive = false;
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // 사운드 이펙트 업데이트
+                for (let i = soundEffects.length - 1; i >= 0; i--) {
+                    const effect = soundEffects[i];
+                    effect.radius += effect.growth;
+                    effect.opacity -= 0.03;
+                    if (effect.opacity <= 0) {
+                        soundEffects.splice(i, 1);
+                    }
+                }
+                
+                gameState.roundTime -= 1/60;
+                checkRoundEnd();
+            }
+        }
+
+        // 라운드 종료 체크
+        function checkRoundEnd() {
+            const team1Alive = players.filter(p => p.team === 1 && p.alive).length;
+            const team2Alive = players.filter(p => p.team === 2 && p.alive).length;
+            
+            if (team1Alive === 0 || team2Alive === 0 || gameState.roundTime <= 0) {
+                let winner = 0;
+                if (team1Alive > team2Alive) {
+                    winner = 1;
+                    gameState.team1Score++;
+                } else if (team2Alive > team1Alive) {
+                    winner = 2;
+                    gameState.team2Score++;
+                }
+                
+                endRound(winner);
+            }
+        }
+
+        // 라운드 종료
+        function endRound(winner) {
+            gameState.gamePhase = 'shop';
+            
+            players.forEach(player => {
+                player.money = Math.min(4000, player.money + 300);
+                player.alive = true;
+                player.health = player.maxHealth;
+            });
+            
+            gameState.round++;
+            gameState.roundTime = 120;
+            
+            if (gameState.team1Score >= 6 || gameState.team2Score >= 6) {
+                endGame();
+                return;
+            }
+            
+            setTimeout(() => {
+                if (gameState.gamePhase === 'shop') {
+                    startRound();
+                }
+            }, 2000);
+        }
+
+        // 라운드 시작
+        function startRound() {
+            gameState.gamePhase = 'playing';
+            gameState.shopOpen = false;
+            document.getElementById('shopModal').style.display = 'none';
+            
+            players[0].x = 80; players[0].y = 80;
+            players[1].x = 1120; players[1].y = 720;
+            
+            bullets.length = 0;
+            soundEffects.length = 0;
+        }
+
+        // 게임 종료
+        function endGame() {
+            gameState.gamePhase = 'ended';
+            const winner = gameState.team1Score > gameState.team2Score ? '플레이어' : 'AI';
+            document.getElementById('gameResult').textContent = `${winner} 승리!`;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // 새 게임
+        window.startNewGame = function() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.querySelectorAll('.shop-item').forEach(item => {
+                if (!item.textContent.includes('무료')) {
+                    item.classList.remove('owned');
+                }
+            });
+            initGame();
+            setTimeout(startRound, 1000);
+        }
+
+        // 그리기 함수들
+        function drawPlayer(player) {
+            if (!player.alive) return;
+            
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 체력바
+            const barWidth = player.radius * 2;
+            const barHeight = 4;
+            const barY = player.y - player.radius - 10;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(player.x - barWidth/2, barY, barWidth, barHeight);
+            
+            const healthPercent = player.health / player.maxHealth;
+            ctx.fillStyle = healthPercent > 0.5 ? '#4f4' : healthPercent > 0.25 ? '#ff4' : '#f44';
+            ctx.fillRect(player.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.id === 1 ? 'P' : 'AI', player.x, player.y + 4);
+        }
+
+        function drawBullet(bullet) {
+            ctx.save();
+            ctx.translate(bullet.x, bullet.y);
+            ctx.rotate(bullet.angle);
+            
+            ctx.fillStyle = bullet.team === 1 ? '#ff6666' : '#6666ff';
+            
+            if (bullet.shape === 'rectangle') {
+                ctx.fillRect(-bullet.width/2, -bullet.height/2, bullet.width, bullet.height);
+            } else if (bullet.shape === 'square') {
+                ctx.fillRect(-bullet.width/2, -bullet.height/2, bullet.width, bullet.height);
+            } else if (bullet.shape === 'diamond') {
+                ctx.beginPath();
+                ctx.moveTo(0, -bullet.height/2);
+                ctx.lineTo(bullet.width/2, 0);
+                ctx.lineTo(0, bullet.height/2);
+                ctx.lineTo(-bullet.width/2, 0);
+                ctx.closePath();
+                ctx.fill();
+            } else if (bullet.shape === 'star') {
+                const outerRadius = bullet.width / 2;
+                const innerRadius = outerRadius * 0.4;
+                const spikes = 5;
+                
+                ctx.beginPath();
+                for (let i = 0; i < spikes * 2; i++) {
+                    const angle = (i * Math.PI) / spikes;
+                    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+            } else if (bullet.shape === 'cross') {
+                const size = bullet.width / 2;
+                const thickness = size * 0.3;
+                
+                ctx.fillRect(-size, -thickness, size * 2, thickness * 2);
+                ctx.fillRect(-thickness, -size, thickness * 2, size * 2);
+                
+                ctx.strokeStyle = bullet.team === 1 ? '#ffdddd' : '#ddddff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-size, -thickness, size * 2, thickness * 2);
+                ctx.strokeRect(-thickness, -size, thickness * 2, size * 2);
+            }
+            
+            ctx.restore();
+        }
+
+        // 메인 그리기 함수
+        function drawGame() {
+            ctx.clearRect(0, 0, 1200, 800);
+            
+            // 벽 그리기
+            ctx.fillStyle = '#666';
+            walls.forEach(wall => {
+                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+            });
+            
+            // 플레이어 그리기
+            players.forEach(player => drawPlayer(player));
+            
+            // 총알 그리기
+            bullets.forEach(bullet => drawBullet(bullet));
+            
+            // 사운드 이펙트 그리기
+            soundEffects.forEach(effect => {
+                ctx.strokeStyle = `rgba(255, 255, 0, ${effect.opacity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // 게임 상태 메시지
+            if (gameState.gamePhase === 'shop') {
+                ctx.fillStyle = 'white';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('라운드 준비 중... Space로 상점 열기', 600, 50);
+                ctx.fillText('1 vs 1 듀얼!', 600, 80);
+            }
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('roundDisplay').textContent = gameState.round;
+            document.getElementById('team1Score').textContent = gameState.team1Score;
+            document.getElementById('team2Score').textContent = gameState.team2Score;
+            document.getElementById('healthDisplay').textContent = Math.ceil(currentPlayer.health);
+            document.getElementById('moneyDisplay').textContent = currentPlayer.money;
+            
+            const weaponNames = {
+                rifle: '직사각형',
+                square: '정사각형', 
+                diamond: '마름모',
+                star: '별',
+                cross: '십자'
+            };
+            document.getElementById('weaponDisplay').textContent = weaponNames[currentPlayer.primaryWeapon] || '직사각형';
+            document.getElementById('timeDisplay').textContent = Math.ceil(gameState.roundTime);
+        }
+
+        // 메인 게임 루프
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 시작
+        window.addEventListener('load', () => {
+            initGame();
+            setupEventListeners();
+            setupShop();
+            gameLoop();
+            setTimeout(startRound, 1000);
+        });
+    </script>
+</body>
+</html>
