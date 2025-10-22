@@ -3,9 +3,17 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 10003;
+const PORT = process.env.PORT || 80;
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, `index.html`), (err) => {
+    if (err) {
+      res.status(500).send('Error');
+    }
+  });
+});
 
 // 데스크탑 게임 목록 API
 app.get('/api/desktop-games', (req, res) => {
