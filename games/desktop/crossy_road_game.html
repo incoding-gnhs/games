@@ -2,346 +2,641 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>길건너친구들</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>길건너 모험</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #87CEEB;
+            font-family: 'Arial', sans-serif;
+            touch-action: none;
+        }
+        
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        #header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .stat-value {
+            font-size: 22px;
+            margin-top: 2px;
+        }
+        
+        #gameWorld {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #2ecc71;
+        }
+        
+        #controlPanel {
+            background: linear-gradient(to top, #2c3e50 0%, #34495e 100%);
+            padding: 25px 20px 35px 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: Arial, sans-serif;
+            box-shadow: 0 -4px 6px rgba(0,0,0,0.3);
         }
         
-        #game {
+        #dpad {
             position: relative;
-            background: #87CEEB;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            width: 200px;
+            height: 200px;
         }
         
-        canvas {
-            display: block;
-        }
-        
-        #ui {
+        .arrow-btn {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: 3px solid #ecf0f1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
             color: white;
-            font-weight: bold;
-            font-size: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.1s;
         }
         
-        #menu {
+        .arrow-btn:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        #btnUp {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        #btnDown {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        #btnLeft {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        #btnRight {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .lane {
+            position: absolute;
+            width: 100%;
+            height: 60px;
+            left: 0;
+        }
+        
+        .lane-grass {
+            background: linear-gradient(to bottom, #27ae60 0%, #229954 100%);
+        }
+        
+        .lane-road {
+            background: linear-gradient(to bottom, #34495e 0%, #2c3e50 100%);
+            border-top: 3px dashed #f39c12;
+            border-bottom: 3px dashed #f39c12;
+        }
+        
+        .lane-water {
+            background: linear-gradient(to bottom, #3498db 0%, #2980b9 100%);
+        }
+        
+        .player {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: radial-gradient(circle at 30% 30%, #f1c40f, #f39c12);
+            border-radius: 50%;
+            border: 4px solid #e67e22;
+            z-index: 5;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .car {
+            position: absolute;
+            height: 50px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 8px;
+            border: 3px solid #922b21;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+        
+        .log {
+            position: absolute;
+            height: 50px;
+            background: linear-gradient(135deg, #8b4513, #654321);
+            border-radius: 8px;
+            border: 3px solid #3e2723;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+        
+        #gameOverModal {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            display: flex;
+            background: rgba(0, 0, 0, 0.92);
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-        }
-        
-        #menu h1 {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        
-        #menu p {
-            font-size: 18px;
-            margin: 5px;
-        }
-        
-        button {
-            margin-top: 20px;
-            padding: 15px 40px;
-            font-size: 20px;
-            background: #667eea;
-            border: none;
-            border-radius: 30px;
+            z-index: 100;
             color: white;
-            cursor: pointer;
-            font-weight: bold;
+            text-align: center;
         }
         
-        button:hover {
-            background: #5568d3;
+        #gameOverModal h1 {
+            font-size: 52px;
+            margin-bottom: 30px;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        
+        .final-stat {
+            font-size: 28px;
+            margin: 15px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 40px;
+            border-radius: 10px;
+            min-width: 280px;
+        }
+        
+        #playAgainBtn {
+            margin-top: 40px;
+            padding: 18px 50px;
+            font-size: 26px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+        }
+        
+        #playAgainBtn:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
     </style>
 </head>
 <body>
-    <div id="game">
-        <canvas id="canvas" width="1000" height="600"></canvas>
-        <div id="ui">
-            <div>점수: <span id="score">0</span></div>
-            <div>거리: <span id="distance">0</span></div>
+    <div id="gameContainer">
+        <div id="header">
+            <div class="stat">
+                <div class="stat-label">점수</div>
+                <div class="stat-value" id="scoreDisplay">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">거리</div>
+                <div class="stat-value" id="distanceDisplay">0m</div>
+            </div>
         </div>
-        <div id="menu" style="display: none;">
-            <h1>🐔 길건너친구들</h1>
-            <p>↑↓←→ 방향키로 이동</p>
-            <p>도로와 강을 건너세요!</p>
-            <button onclick="start()">시작</button>
+        
+        <div id="gameWorld"></div>
+        
+        <div id="controlPanel">
+            <div id="dpad">
+                <div class="arrow-btn" id="btnUp">▲</div>
+                <div class="arrow-btn" id="btnLeft">◀</div>
+                <div class="arrow-btn" id="btnRight">▶</div>
+                <div class="arrow-btn" id="btnDown">▼</div>
+            </div>
+        </div>
+        
+        <div id="gameOverModal">
+            <h1>게임 종료!</h1>
+            <div class="final-stat">최종 점수: <span id="finalScore">0</span></div>
+            <div class="final-stat">이동 거리: <span id="finalDistance">0</span>m</div>
+            <button id="playAgainBtn">다시 도전하기</button>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const menu = document.getElementById('menu');
-        
-        let game = {
-            running: false,
+        const game = {
+            world: document.getElementById('gameWorld'),
+            scoreDisplay: document.getElementById('scoreDisplay'),
+            distanceDisplay: document.getElementById('distanceDisplay'),
+            modal: document.getElementById('gameOverModal'),
+            
+            player: null,
+            lanes: [],
+            obstacles: [],
+            
             score: 0,
             distance: 0,
-            speed: 1,
-            time: 0
-        };
-        
-        let player = {
-            x: 500,
-            y: 550,
-            size: 25,
-            moving: false
-        };
-        
-        let rows = [];
-        let cars = [];
-        let logs = [];
-        
-        function start() {
-            menu.style.display = 'none';
-            game = { running: true, score: 0, distance: 0, speed: 1, time: 0 };
-            player = { x: 500, y: 550, size: 25, moving: false };
-            rows = [];
-            cars = [];
-            logs = [];
+            maxDistance: 0,
             
-            // 초기 레인 생성
-            for (let i = 0; i < 15; i++) {
-                addRow(i * 40);
-            }
+            cellSize: 60,
+            gridWidth: 0,
+            gridHeight: 0,
             
-            loop();
-        }
-        
-        function addRow(y) {
-            const rand = Math.random();
-            let type = 'grass';
+            playerX: 0,
+            playerY: 0,
             
-            if (y < 200 || y > 500) {
-                type = 'grass';
-            } else if (rand < 0.4) {
-                type = 'road';
-                // 차 생성
-                const dir = Math.random() > 0.5 ? 1 : -1;
-                const count = Math.floor(Math.random() * 2) + 1;
-                for (let i = 0; i < count; i++) {
-                    cars.push({
-                        x: Math.random() * 1000,
-                        y: y,
-                        w: 60,
-                        h: 30,
-                        speed: (2 + Math.random() * 2) * dir,
-                        color: `hsl(${Math.random() * 360}, 70%, 50%)`
+            isRunning: false,
+            isGameOver: false,
+            
+            difficulty: 1,
+            
+            lastSpawnTime: {},
+            
+            init() {
+                this.gridWidth = Math.floor(this.world.offsetWidth / this.cellSize);
+                this.gridHeight = Math.floor(this.world.offsetHeight / this.cellSize);
+                
+                this.playerX = Math.floor(this.gridWidth / 2);
+                this.playerY = 2;
+                
+                this.score = 0;
+                this.distance = 0;
+                this.maxDistance = 0;
+                this.difficulty = 1;
+                
+                this.isRunning = true;
+                this.isGameOver = false;
+                
+                this.world.innerHTML = '';
+                this.lanes = [];
+                this.obstacles = [];
+                this.lastSpawnTime = {};
+                
+                this.generateWorld();
+                this.createPlayer();
+                this.updateUI();
+                
+                this.modal.style.display = 'none';
+                
+                this.gameLoop();
+            },
+            
+            generateWorld() {
+                const totalLanes = this.gridHeight + 50;
+                
+                for (let i = 0; i < totalLanes; i++) {
+                    let type = 'grass';
+                    let speed = 0;
+                    let direction = 1;
+                    
+                    if (i > 3) {
+                        const rand = Math.random();
+                        if (rand < 0.4) {
+                            type = 'road';
+                            speed = (Math.random() * 1.5 + 0.8);
+                            direction = Math.random() > 0.5 ? 1 : -1;
+                        } else if (rand < 0.65) {
+                            type = 'water';
+                            speed = (Math.random() * 1.2 + 0.6);
+                            direction = Math.random() > 0.5 ? 1 : -1;
+                        }
+                    }
+                    
+                    this.lanes.push({
+                        index: i,
+                        type: type,
+                        speed: speed,
+                        direction: direction
                     });
                 }
-            } else if (rand < 0.7) {
-                type = 'river';
-                // 통나무 생성
-                const dir = Math.random() > 0.5 ? 1 : -1;
-                const count = Math.floor(Math.random() * 3) + 2;
-                for (let i = 0; i < count; i++) {
-                    logs.push({
-                        x: (i * 300) + Math.random() * 100,
-                        y: y,
-                        w: 100,
-                        h: 30,
-                        speed: (1 + Math.random()) * dir
-                    });
+                
+                this.renderLanes();
+            },
+            
+            renderLanes() {
+                const existingLanes = this.world.querySelectorAll('.lane');
+                existingLanes.forEach(el => el.remove());
+                
+                this.lanes.forEach(lane => {
+                    const screenY = lane.index - this.playerY + 2;
+                    
+                    if (screenY >= -1 && screenY <= this.gridHeight + 1) {
+                        const laneEl = document.createElement('div');
+                        laneEl.className = 'lane lane-' + lane.type;
+                        laneEl.style.top = (screenY * this.cellSize) + 'px';
+                        this.world.appendChild(laneEl);
+                    }
+                });
+            },
+            
+            createPlayer() {
+                this.player = document.createElement('div');
+                this.player.className = 'player';
+                this.world.appendChild(this.player);
+                this.updatePlayerPosition();
+            },
+            
+            updatePlayerPosition() {
+                if (!this.player) return;
+                
+                const screenX = this.playerX * this.cellSize + (this.cellSize - 45) / 2;
+                const screenY = 2 * this.cellSize + (this.cellSize - 45) / 2;
+                
+                this.player.style.left = screenX + 'px';
+                this.player.style.top = screenY + 'px';
+            },
+            
+            movePlayer(dx, dy) {
+                if (this.isGameOver || !this.isRunning) return;
+                
+                const newX = this.playerX + dx;
+                const newY = this.playerY + dy;
+                
+                if (newX < 0 || newX >= this.gridWidth) return;
+                if (newY < 0) return;
+                
+                this.playerX = newX;
+                this.playerY = newY;
+                
+                if (this.playerY > this.maxDistance) {
+                    const progress = this.playerY - this.maxDistance;
+                    this.maxDistance = this.playerY;
+                    this.distance = this.maxDistance;
+                    this.score += progress * 10;
+                    
+                    this.difficulty = 1 + (this.distance / 80);
                 }
-            }
+                
+                this.updatePlayerPosition();
+                this.renderLanes();
+                this.updateUI();
+            },
             
-            rows.push({ y: y, type: type });
-        }
-        
-        function loop() {
-            if (!game.running) return;
+            spawnObstacles() {
+                const currentTime = Date.now();
+                
+                this.lanes.forEach(lane => {
+                    const screenY = lane.index - this.playerY + 2;
+                    
+                    if (screenY < -2 || screenY > this.gridHeight + 2) return;
+                    
+                    const spawnKey = 'lane_' + lane.index;
+                    const lastSpawn = this.lastSpawnTime[spawnKey] || 0;
+                    
+                    if (currentTime - lastSpawn < 1000 / this.difficulty) return;
+                    
+                    if (lane.type === 'road') {
+                        if (Math.random() < 0.03 * this.difficulty) {
+                            this.createCar(lane);
+                            this.lastSpawnTime[spawnKey] = currentTime;
+                        }
+                    } else if (lane.type === 'water') {
+                        if (Math.random() < 0.025 * this.difficulty) {
+                            this.createLog(lane);
+                            this.lastSpawnTime[spawnKey] = currentTime;
+                        }
+                    }
+                });
+            },
             
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-        
-        function update() {
-            game.time++;
-            game.speed = 1 + (game.time / 3600) * 3;
+            createCar(lane) {
+                const startX = lane.direction > 0 ? -3 : this.gridWidth + 3;
+                const width = Math.floor(Math.random() * 2) + 2;
+                
+                const car = {
+                    type: 'car',
+                    lane: lane,
+                    x: startX,
+                    width: width,
+                    element: document.createElement('div')
+                };
+                
+                car.element.className = 'car';
+                car.element.style.width = (width * this.cellSize - 10) + 'px';
+                this.world.appendChild(car.element);
+                
+                this.obstacles.push(car);
+            },
             
-            // 차 이동
-            for (let car of cars) {
-                car.x += car.speed * game.speed;
-                if (car.x > 1100) car.x = -100;
-                if (car.x < -100) car.x = 1100;
-            }
+            createLog(lane) {
+                const startX = lane.direction > 0 ? -3 : this.gridWidth + 3;
+                const width = Math.floor(Math.random() * 3) + 2;
+                
+                const log = {
+                    type: 'log',
+                    lane: lane,
+                    x: startX,
+                    width: width,
+                    element: document.createElement('div')
+                };
+                
+                log.element.className = 'log';
+                log.element.style.width = (width * this.cellSize - 10) + 'px';
+                this.world.appendChild(log.element);
+                
+                this.obstacles.push(log);
+            },
             
-            // 통나무 이동
-            for (let log of logs) {
-                log.x += log.speed * game.speed;
-                if (log.x > 1100) log.x = -100;
-                if (log.x < -100) log.x = 1100;
-            }
+            updateObstacles() {
+                this.obstacles.forEach(obs => {
+                    obs.x += obs.lane.speed * obs.lane.direction * 0.04 * this.difficulty;
+                    
+                    const screenY = obs.lane.index - this.playerY + 2;
+                    const screenX = obs.x * this.cellSize;
+                    const screenYPx = screenY * this.cellSize + (this.cellSize - 50) / 2;
+                    
+                    obs.element.style.left = screenX + 'px';
+                    obs.element.style.top = screenYPx + 'px';
+                });
+                
+                this.obstacles = this.obstacles.filter(obs => {
+                    const inBounds = obs.x > -5 && obs.x < this.gridWidth + 5;
+                    if (!inBounds) {
+                        obs.element.remove();
+                    }
+                    return inBounds;
+                });
+            },
             
-            // 새 레인 추가
-            if (rows[0].y > -40) {
-                addRow(rows[0].y - 40);
-                rows.unshift(rows[rows.length - 1]);
-                rows.pop();
-            }
-            
-            // 충돌 체크
-            if (!player.moving) {
-                checkCollision();
-            }
-            
-            // UI 업데이트
-            document.getElementById('score').textContent = game.score;
-            document.getElementById('distance').textContent = game.distance;
-        }
-        
-        function checkCollision() {
-            const row = rows.find(r => Math.abs(r.y - player.y) < 20);
-            if (!row) return;
-            
-            if (row.type === 'road') {
-                for (let car of cars) {
-                    if (Math.abs(car.y - player.y) < 20 &&
-                        player.x + player.size > car.x &&
-                        player.x < car.x + car.w) {
-                        gameOver();
+            checkCollisions() {
+                const playerLane = this.lanes[this.playerY];
+                if (!playerLane) return;
+                
+                if (playerLane.type === 'road') {
+                    for (let obs of this.obstacles) {
+                        if (obs.type === 'car' && obs.lane === playerLane) {
+                            const left = obs.x;
+                            const right = obs.x + obs.width;
+                            
+                            if (this.playerX >= left - 0.6 && this.playerX <= right + 0.6) {
+                                this.endGame();
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                if (playerLane.type === 'water') {
+                    let onLog = false;
+                    let logSpeed = 0;
+                    
+                    for (let obs of this.obstacles) {
+                        if (obs.type === 'log' && obs.lane === playerLane) {
+                            const left = obs.x;
+                            const right = obs.x + obs.width;
+                            
+                            if (this.playerX >= left - 0.4 && this.playerX <= right + 0.4) {
+                                onLog = true;
+                                logSpeed = obs.lane.speed * obs.lane.direction * 0.04 * this.difficulty;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (onLog) {
+                        this.playerX += logSpeed;
+                        
+                        if (this.playerX < 0 || this.playerX >= this.gridWidth) {
+                            this.endGame();
+                            return;
+                        }
+                        
+                        this.updatePlayerPosition();
+                    } else {
+                        this.endGame();
                         return;
                     }
                 }
-            }
+            },
             
-            if (row.type === 'river') {
-                let onLog = false;
-                for (let log of logs) {
-                    if (Math.abs(log.y - player.y) < 20 &&
-                        player.x + player.size > log.x &&
-                        player.x < log.x + log.w) {
-                        onLog = true;
-                        player.x += log.speed * game.speed;
-                        break;
+            endGame() {
+                if (this.isGameOver) return;
+                
+                this.isGameOver = true;
+                this.isRunning = false;
+                
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalDistance').textContent = this.distance;
+                
+                this.modal.style.display = 'flex';
+            },
+            
+            updateUI() {
+                this.scoreDisplay.textContent = this.score;
+                this.distanceDisplay.textContent = this.distance + 'm';
+            },
+            
+            gameLoop() {
+                if (!this.isRunning) return;
+                
+                this.spawnObstacles();
+                this.updateObstacles();
+                this.checkCollisions();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        };
+        
+        function setupControls() {
+            document.getElementById('btnUp').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                game.movePlayer(0, 1);
+            });
+            
+            document.getElementById('btnDown').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                game.movePlayer(0, -1);
+            });
+            
+            document.getElementById('btnLeft').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                game.movePlayer(-1, 0);
+            });
+            
+            document.getElementById('btnRight').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                game.movePlayer(1, 0);
+            });
+            
+            document.getElementById('btnUp').addEventListener('click', () => game.movePlayer(0, 1));
+            document.getElementById('btnDown').addEventListener('click', () => game.movePlayer(0, -1));
+            document.getElementById('btnLeft').addEventListener('click', () => game.movePlayer(-1, 0));
+            document.getElementById('btnRight').addEventListener('click', () => game.movePlayer(1, 0));
+            
+            let touchStartX = 0;
+            let touchStartY = 0;
+            
+            game.world.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+            
+            game.world.addEventListener('touchend', (e) => {
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                const dy = e.changedTouches[0].clientY - touchStartY;
+                
+                const threshold = 40;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (Math.abs(dx) > threshold) {
+                        game.movePlayer(dx > 0 ? 1 : -1, 0);
+                    }
+                } else {
+                    if (Math.abs(dy) > threshold) {
+                        game.movePlayer(0, dy < 0 ? 1 : -1);
                     }
                 }
-                if (!onLog) {
-                    gameOver();
-                    return;
-                }
-            }
+            });
             
-            if (player.x < 0 || player.x > 1000 - player.size) {
-                gameOver();
-            }
+            document.getElementById('playAgainBtn').addEventListener('click', () => game.init());
+            document.getElementById('playAgainBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                game.init();
+            });
         }
         
-        function gameOver() {
-            game.running = false;
-            menu.innerHTML = `
-                <h1>게임 오버!</h1>
-                <p>최종 점수: ${game.score}</p>
-                <p>이동 거리: ${game.distance}</p>
-                <button onclick="start()">다시 시작</button>
-            `;
-            menu.style.display = 'flex';
-        }
-        
-        function draw() {
-            ctx.clearRect(0, 0, 1000, 600);
-            
-            // 레인 그리기
-            for (let row of rows) {
-                if (row.y < -40 || row.y > 600) continue;
-                
-                if (row.type === 'grass') {
-                    ctx.fillStyle = '#7CFC00';
-                } else if (row.type === 'road') {
-                    ctx.fillStyle = '#555';
-                } else {
-                    ctx.fillStyle = '#4169E1';
-                }
-                ctx.fillRect(0, row.y, 1000, 40);
-            }
-            
-            // 차 그리기
-            for (let car of cars) {
-                if (car.y < -40 || car.y > 600) continue;
-                ctx.fillStyle = car.color;
-                ctx.fillRect(car.x, car.y + 5, car.w, car.h);
-            }
-            
-            // 통나무 그리기
-            for (let log of logs) {
-                if (log.y < -40 || log.y > 600) continue;
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(log.x, log.y + 5, log.w, log.h);
-            }
-            
-            // 플레이어 그리기
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(player.x + player.size/2, player.y + player.size/2, player.size/2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(player.x + 8, player.y + 8, 3, 0, Math.PI * 2);
-            ctx.arc(player.x + 17, player.y + 8, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // 키보드 입력
-        document.addEventListener('keydown', (e) => {
-            if (!game.running || player.moving) return;
-            
-            let moved = false;
-            
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                player.y -= 40;
-                moved = true;
-                game.distance++;
-                game.score += Math.floor(10 * game.speed);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                player.y += 40;
-                moved = true;
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                if (player.x > 0) {
-                    player.x -= 40;
-                    moved = true;
-                }
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                if (player.x < 960) {
-                    player.x += 40;
-                    moved = true;
-                }
-            }
-            
-            if (moved) {
-                player.moving = true;
-                setTimeout(() => player.moving = false, 100);
-            }
+        window.addEventListener('load', () => {
+            setupControls();
+            setTimeout(() => game.init(), 100);
         });
     </script>
 </body>
