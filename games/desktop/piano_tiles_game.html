@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>피아노 타일 게임 v10</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: black;
+        }
+
+        .game-container {
+            width: 400px;
+            height: 600px;
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-header {
+            height: 80px;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 2px solid #ccc;
+        }
+
+        .score, .level, .speed {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .hearts {
+            display: flex;
+            gap: 5px;
+            font-size: 24px;
+        }
+
+        .heart {
+            color: #ff4444;
+            transition: all 0.3s ease;
+        }
+
+        .heart.lost {
+            color: #ccc;
+            opacity: 0.3;
+        }
+
+        .timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff4444;
+        }
+
+        .game-area {
+            height: 440px;
+            position: relative;
+            overflow: hidden;
+            background: white;
+        }
+
+        .lanes {
+            display: flex;
+            height: 100%;
+            position: absolute;
+            width: 100%;
+        }
+
+        .lane {
+            flex: 1;
+            border-right: 2px solid #ccc;
+            position: relative;
+            background: white;
+        }
+
+        .lane:last-child {
+            border-right: none;
+        }
+
+        .judgment-line {
+            position: absolute;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #ff4444;
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .tile {
+            position: absolute;
+            width: calc(100% - 4px);
+            height: 80px;
+            background: black;
+            margin: 2px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 32px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.1s ease;
+        }
+
+        .tile.hit {
+            background: #4CAF50;
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        .controls {
+            height: 80px;
+            display: flex;
+            background: #f0f0f0;
+            border-top: 2px solid #ccc;
+        }
+
+        .key {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-right: 2px solid #ccc;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            background: white;
+            color: black;
+        }
+
+        .key:last-child {
+            border-right: none;
+        }
+
+        .key:hover {
+            background: #e0e0e0;
+        }
+
+        .key.pressed {
+            background: #d0d0d0;
+            transform: scale(0.95);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            margin: 10px 0;
+            color: white;
+        }
+
+        .restart-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background: black;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 999;
+        }
+
+        .instructions h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .instructions p {
+            font-size: 16px;
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+
+        .start-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background: black;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .miss-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+
+        .miss-effect.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="score">점수: <span id="score">0</span></div>
+            <div class="hearts" id="hearts">
+                <span class="heart">♥</span>
+                <span class="heart">♥</span>
+                <span class="heart">♥</span>
+                <span class="heart">♥</span>
+            </div>
+            <div class="level">레벨: <span id="level">1</span></div>
+            <div class="speed">속도: <span id="speed">1.0x</span></div>
+            <div class="timer" id="timer" style="display: none;">30</div>
+        </div>
+        
+        <div class="game-area">
+            <div class="lanes">
+                <div class="lane" data-lane="0"></div>
+                <div class="lane" data-lane="1"></div>
+                <div class="lane" data-lane="2"></div>
+                <div class="lane" data-lane="3"></div>
+            </div>
+            <div class="judgment-line"></div>
+            <div class="miss-effect" id="missEffect"></div>
+        </div>
+        
+        <div class="controls">
+            <div class="key" data-key="0">S</div>
+            <div class="key" data-key="1">D</div>
+            <div class="key" data-key="2">K</div>
+            <div class="key" data-key="3">L</div>
+        </div>
+
+        <div class="instructions" id="instructions">
+            <h3>피아노 타일 게임 v10</h3>
+            <p>S, D, K, L 키를 사용하세요</p>
+            <p>하트 4개가 모두 사라지면 게임오버!</p>
+            <p>레벨 3~5에서는 동시 타일이 나옵니다!</p>
+            <p>레벨 10에서 30초 생존하면 승리!</p>
+            <p>레벨이 올라갈수록 더 어려워집니다</p>
+            <button class="start-btn" onclick="startGame()">게임 시작</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>게임 오버!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>달성 레벨: <span id="finalLevel">1</span></p>
+            <p>총 타일 수: <span id="totalTiles">0</span></p>
+            <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            isRunning: false,
+            score: 0,
+            level: 1,
+            speed: 1.0,
+            tiles: [],
+            nextTileId: 0,
+            tilesCleared: 0,
+            totalTiles: 200,
+            keysPressed: [false, false, false, false],
+            lastSpawnTime: [0, 0, 0, 0], // 각 레인의 마지막 스폰 시간
+            patternIndex: 0,
+            currentPattern: []
+        };
+
+        const keys = ['KeyS', 'KeyD', 'KeyK', 'KeyL'];
+        const lanes = document.querySelectorAll('.lane');
+        const keyElements = document.querySelectorAll('.key');
+        let gameLoop;
+        let spawnLoop;
+
+        // 다양한 패턴 정의
+        const singlePatterns = [
+            // 단일 타일 패턴만
+            [[0], [1], [2], [3]],
+            [[0], [0], [1], [1], [2], [2], [3], [3]],
+            [[0], [3], [0], [3], [1], [2], [1], [2]],
+            [[0], [3], [1], [2], [0], [3], [1], [2]],
+            [[0], [1], [2], [3], [3], [2], [1], [0]],
+            [[0], [2], [1], [3], [0], [3], [2], [1]],
+            [[1], [2], [1], [2], [1], [2], [1], [2]],
+            [[0], [3], [0], [3], [0], [3], [0], [3]],
+            [[0], [1], [2], [3], [2], [1], [0], [1]],
+            [[0], [0], [1], [2], [2], [3], [1], [3]],
+        ];
+
+        const doublePatterns = [
+            // 더블 타일 패턴 (레벨 3-5 전용)
+            [[0, 1], [2, 3], [0, 2], [1, 3]],
+            [[0, 3], [1, 2], [0, 3], [1, 2]],
+            [[1], [2], [1], [2], [1, 2], [1], [2]],
+            [[0], [3], [0], [3], [0, 3], [0], [3]],
+            [[0, 1], [0], [1], [2, 3], [2], [3]],
+            [[0, 2], [1, 3], [0, 3], [1, 2]],
+        ];
+
+        function getRandomPattern() {
+            // 레벨 3~5일 때만 더블 패턴 포함
+            if (gameState.level >= 3 && gameState.level <= 5) {
+                const allPatterns = [...singlePatterns, ...doublePatterns];
+                const patternIndex = Math.floor(Math.random() * allPatterns.length);
+                return [...allPatterns[patternIndex]];
+            } else {
+                // 레벨 1-2, 6+ 에서는 싱글 패턴만
+                const patternIndex = Math.floor(Math.random() * singlePatterns.length);
+                return [...singlePatterns[patternIndex]];
+            }
+        }
+
+        function startGame() {
+            document.getElementById('instructions').style.display = 'none';
+            gameState.isRunning = true;
+            gameState.score = 0;
+            gameState.level = 1;
+            gameState.speed = 1.0;
+            gameState.tiles = [];
+            gameState.nextTileId = 0;
+            gameState.tilesCleared = 0;
+            gameState.patternIndex = 0;
+            gameState.currentPattern = getRandomPattern();
+            gameState.hearts = 4;
+            gameState.level10StartTime = null;
+            gameState.level10Timer = null;
+            
+            updateDisplay();
+            updateHearts();
+            document.getElementById('timer').style.display = 'none';
+            spawnTile();
+            
+            gameLoop = setInterval(updateGame, 16);
+            spawnLoop = setInterval(spawnTile, 600 / gameState.speed);
+        }
+
+        function spawnTile() {
+            if (gameState.tilesCleared >= gameState.totalTiles) {
+                return;
+            }
+
+            // 현재 패턴이 끝났으면 새 패턴 선택
+            if (gameState.patternIndex >= gameState.currentPattern.length) {
+                gameState.currentPattern = getRandomPattern();
+                gameState.patternIndex = 0;
+            }
+
+            // 현재 패턴에서 생성할 레인들 가져오기
+            const lanesToSpawn = gameState.currentPattern[gameState.patternIndex];
+            gameState.patternIndex++;
+
+            // 각 레인에 타일 생성
+            lanesToSpawn.forEach(lane => {
+                const tile = {
+                    id: gameState.nextTileId++,
+                    lane: lane,
+                    y: -80,
+                    hit: false
+                };
+
+                gameState.tiles.push(tile);
+                
+                const tileElement = document.createElement('div');
+                tileElement.className = 'tile';
+                tileElement.id = `tile-${tile.id}`;
+                tileElement.style.top = `${tile.y}px`;
+                tileElement.textContent = '0';
+                
+                lanes[lane].appendChild(tileElement);
+            });
+        }
+
+        function updateGame() {
+            if (!gameState.isRunning) return;
+
+            // 타일 이동
+            gameState.tiles.forEach(tile => {
+                if (!tile.hit) {
+                    tile.y += 3 * gameState.speed;
+                    const tileElement = document.getElementById(`tile-${tile.id}`);
+                    if (tileElement) {
+                        tileElement.style.top = `${tile.y}px`;
+                        
+                        // 판정선(바닥)에 닿으면 게임오버
+                        if (tile.y >= 440) {
+                            gameOver();
+                        }
+                    }
+                }
+            });
+
+            // 타일 순서 업데이트 (Y값 기준으로 정렬)
+            updateTileNumbers();
+
+            // 화면 밖 타일 제거
+            gameState.tiles = gameState.tiles.filter(tile => {
+                if (tile.y > 600 || tile.hit) {
+                    const tileElement = document.getElementById(`tile-${tile.id}`);
+                    if (tileElement) {
+                        setTimeout(() => {
+                            if (tileElement) tileElement.remove();
+                        }, 150);
+                    }
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function updateTileNumbers() {
+            // 모든 타일을 Y값 기준으로 내림차순 정렬 (아래쪽이 먼저)
+            const sortedTiles = gameState.tiles
+                .filter(tile => !tile.hit)
+                .sort((a, b) => b.y - a.y);
+
+            // Y 좌표가 비슷한 타일들을 그룹으로 묶기 (동시에 생성된 타일)
+            const groups = [];
+            let currentGroup = [];
+            let lastY = null;
+            const yThreshold = 5; // Y 좌표 차이가 5 이하면 같은 그룹
+
+            sortedTiles.forEach(tile => {
+                if (lastY === null || Math.abs(tile.y - lastY) <= yThreshold) {
+                    currentGroup.push(tile);
+                } else {
+                    if (currentGroup.length > 0) {
+                        groups.push(currentGroup);
+                    }
+                    currentGroup = [tile];
+                }
+                lastY = tile.y;
+            });
+            
+            if (currentGroup.length > 0) {
+                groups.push(currentGroup);
+            }
+
+            // 각 그룹에 순서 번호 부여
+            groups.forEach((group, groupIndex) => {
+                const orderNumber = groupIndex + 1;
+                group.forEach(tile => {
+                    const tileElement = document.getElementById(`tile-${tile.id}`);
+                    if (tileElement) {
+                        tileElement.textContent = `${orderNumber}`;
+                    }
+                });
+            });
+        }
+
+        function hitTile(lane) {
+            if (!gameState.isRunning) return;
+
+            // 모든 타일을 Y값 기준으로 정렬하여 그룹 찾기
+            const sortedTiles = gameState.tiles
+                .filter(tile => !tile.hit)
+                .sort((a, b) => b.y - a.y);
+
+            if (sortedTiles.length === 0) return;
+
+            // 가장 아래쪽 타일들의 그룹 찾기 (Y 좌표가 비슷한 타일들)
+            const yThreshold = 5;
+            const bottomY = sortedTiles[0].y;
+            const bottomGroup = sortedTiles.filter(tile => 
+                Math.abs(tile.y - bottomY) <= yThreshold
+            );
+
+            // 눌린 레인의 타일이 가장 아래 그룹에 있는지 확인
+            const targetTile = bottomGroup.find(tile => tile.lane === lane);
+
+            if (targetTile) {
+                // 올바른 타일을 눌렀을 때
+                targetTile.hit = true;
+                const tileElement = document.getElementById(`tile-${targetTile.id}`);
+                if (tileElement) {
+                    tileElement.classList.add('hit');
+                }
+
+                gameState.score += 10 * gameState.level;
+                gameState.tilesCleared++;
+                
+                // 레벨업 체크 (20개마다)
+                if (gameState.tilesCleared % 20 === 0) {
+                    levelUp();
+                }
+                
+                updateDisplay();
+                
+                // 게임 완료 체크
+                if (gameState.tilesCleared >= gameState.totalTiles) {
+                    setTimeout(() => {
+                        gameComplete();
+                    }, 1000);
+                }
+            } else {
+                // 잘못된 타일을 눌렀을 때 (순서가 틀림)
+                showMissEffect();
+                gameState.hearts--;
+                updateHearts();
+                
+                // 하트가 0이 되면 게임오버
+                if (gameState.hearts <= 0) {
+                    gameOver();
+                }
+            }
+        }
+
+        function levelUp() {
+            gameState.level++;
+            gameState.speed = Math.min(3.0, 1.0 + (gameState.level - 1) * 0.2);
+            
+            // 레벨 10 도달 시 타이머 시작
+            if (gameState.level === 10 && !gameState.level10StartTime) {
+                gameState.level10StartTime = Date.now();
+                document.getElementById('timer').style.display = 'block';
+                startLevel10Timer();
+            }
+            
+            // 새로운 패턴 선택 (레벨에 따라 더블 패턴 포함 여부가 달라짐)
+            gameState.currentPattern = getRandomPattern();
+            gameState.patternIndex = 0;
+            
+            // 스폰 간격 조정 (레벨 6 이상에서는 속도 증가 완화)
+            clearInterval(spawnLoop);
+            let newSpawnRate;
+            if (gameState.level <= 5) {
+                newSpawnRate = Math.max(300, 600 - (gameState.level - 1) * 40);
+            } else {
+                // 레벨 6 이상: 더 느린 속도 증가
+                newSpawnRate = Math.max(400, 600 - 5 * 40 - (gameState.level - 6) * 20);
+            }
+            spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
+            
+            updateDisplay();
+        }
+
+        function startLevel10Timer() {
+            let timeLeft = 30;
+            gameState.level10Timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(gameState.level10Timer);
+                    victoryComplete();
+                }
+            }, 1000);
+        }
+
+        function showMissEffect() {
+            const missEffect = document.getElementById('missEffect');
+            missEffect.classList.add('show');
+            setTimeout(() => {
+                missEffect.classList.remove('show');
+            }, 100);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('speed').textContent = gameState.speed.toFixed(1) + 'x';
+        }
+
+        function updateHearts() {
+            const heartElements = document.querySelectorAll('.heart');
+            heartElements.forEach((heart, index) => {
+                if (index < gameState.hearts) {
+                    heart.classList.remove('lost');
+                } else {
+                    heart.classList.add('lost');
+                }
+            });
+        }
+
+        function gameOver() {
+            gameState.isRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(spawnLoop);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
+            }
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function victoryComplete() {
+            gameState.isRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(spawnLoop);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
+            }
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
+            document.getElementById('gameOver').querySelector('h2').textContent = '🎉 축하합니다! 🎉';
+            document.getElementById('gameOver').querySelector('h2').style.color = '#4CAF50';
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function gameComplete() {
+            gameState.isRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(spawnLoop);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
+            }
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
+            document.getElementById('gameOver').querySelector('h2').textContent = '게임 완료!';
+            document.getElementById('gameOver').querySelector('h2').style.color = '#333';
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function restartGame() {
+            // 화면 초기화
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameOver').querySelector('h2').textContent = '게임 오버!';
+            document.getElementById('instructions').style.display = 'block';
+            
+            // 타일 제거
+            lanes.forEach(lane => {
+                lane.innerHTML = '';
+            });
+            
+            // 상태 초기화
+            gameState = {
+                isRunning: false,
+                score: 0,
+                level: 1,
+                speed: 1.0,
+                tiles: [],
+                nextTileId: 0,
+                tilesCleared: 0,
+                totalTiles: 200,
+                keysPressed: [false, false, false, false],
+                lastSpawnTime: [0, 0, 0, 0],
+                patternIndex: 0,
+                currentPattern: [],
+                lastSpawnTime: [0, 0, 0, 0]
+            };
+            
+            updateDisplay();
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            const keyIndex = keys.indexOf(e.code);
+            if (keyIndex !== -1 && !gameState.keysPressed[keyIndex]) {
+                gameState.keysPressed[keyIndex] = true;
+                keyElements[keyIndex].classList.add('pressed');
+                hitTile(keyIndex);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const keyIndex = keys.indexOf(e.code);
+            if (keyIndex !== -1) {
+                gameState.keysPressed[keyIndex] = false;
+                keyElements[keyIndex].classList.remove('pressed');
+            }
+        });
+
+        // 마우스 클릭 이벤트
+        keyElements.forEach((keyElement, index) => {
+            keyElement.addEventListener('mousedown', () => {
+                keyElement.classList.add('pressed');
+                hitTile(index);
+            });
+            
+            keyElement.addEventListener('mouseup', () => {
+                keyElement.classList.remove('pressed');
+            });
+        });
+
+        // 초기 화면 표시
+        updateDisplay();
+    </script>
+</body>
+</html>
