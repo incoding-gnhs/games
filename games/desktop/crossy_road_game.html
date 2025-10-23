@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>길건너친구들</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+        
+        #game {
+            position: relative;
+            background: #87CEEB;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #menu h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        #menu p {
+            font-size: 18px;
+            margin: 5px;
+        }
+        
+        button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #667eea;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <canvas id="canvas" width="1000" height="600"></canvas>
+        <div id="ui">
+            <div>점수: <span id="score">0</span></div>
+            <div>거리: <span id="distance">0</span></div>
+        </div>
+        <div id="menu" style="display: none;">
+            <h1>🐔 길건너친구들</h1>
+            <p>↑↓←→ 방향키로 이동</p>
+            <p>도로와 강을 건너세요!</p>
+            <button onclick="start()">시작</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        
+        let game = {
+            running: false,
+            score: 0,
+            distance: 0,
+            speed: 1,
+            time: 0
+        };
+        
+        let player = {
+            x: 500,
+            y: 550,
+            size: 25,
+            moving: false
+        };
+        
+        let rows = [];
+        let cars = [];
+        let logs = [];
+        
+        function start() {
+            menu.style.display = 'none';
+            game = { running: true, score: 0, distance: 0, speed: 1, time: 0 };
+            player = { x: 500, y: 550, size: 25, moving: false };
+            rows = [];
+            cars = [];
+            logs = [];
+            
+            // 초기 레인 생성
+            for (let i = 0; i < 15; i++) {
+                addRow(i * 40);
+            }
+            
+            loop();
+        }
+        
+        function addRow(y) {
+            const rand = Math.random();
+            let type = 'grass';
+            
+            if (y < 200 || y > 500) {
+                type = 'grass';
+            } else if (rand < 0.4) {
+                type = 'road';
+                // 차 생성
+                const dir = Math.random() > 0.5 ? 1 : -1;
+                const count = Math.floor(Math.random() * 2) + 1;
+                for (let i = 0; i < count; i++) {
+                    cars.push({
+                        x: Math.random() * 1000,
+                        y: y,
+                        w: 60,
+                        h: 30,
+                        speed: (2 + Math.random() * 2) * dir,
+                        color: `hsl(${Math.random() * 360}, 70%, 50%)`
+                    });
+                }
+            } else if (rand < 0.7) {
+                type = 'river';
+                // 통나무 생성
+                const dir = Math.random() > 0.5 ? 1 : -1;
+                const count = Math.floor(Math.random() * 3) + 2;
+                for (let i = 0; i < count; i++) {
+                    logs.push({
+                        x: (i * 300) + Math.random() * 100,
+                        y: y,
+                        w: 100,
+                        h: 30,
+                        speed: (1 + Math.random()) * dir
+                    });
+                }
+            }
+            
+            rows.push({ y: y, type: type });
+        }
+        
+        function loop() {
+            if (!game.running) return;
+            
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        
+        function update() {
+            game.time++;
+            game.speed = 1 + (game.time / 3600) * 3;
+            
+            // 차 이동
+            for (let car of cars) {
+                car.x += car.speed * game.speed;
+                if (car.x > 1100) car.x = -100;
+                if (car.x < -100) car.x = 1100;
+            }
+            
+            // 통나무 이동
+            for (let log of logs) {
+                log.x += log.speed * game.speed;
+                if (log.x > 1100) log.x = -100;
+                if (log.x < -100) log.x = 1100;
+            }
+            
+            // 새 레인 추가
+            if (rows[0].y > -40) {
+                addRow(rows[0].y - 40);
+                rows.unshift(rows[rows.length - 1]);
+                rows.pop();
+            }
+            
+            // 충돌 체크
+            if (!player.moving) {
+                checkCollision();
+            }
+            
+            // UI 업데이트
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('distance').textContent = game.distance;
+        }
+        
+        function checkCollision() {
+            const row = rows.find(r => Math.abs(r.y - player.y) < 20);
+            if (!row) return;
+            
+            if (row.type === 'road') {
+                for (let car of cars) {
+                    if (Math.abs(car.y - player.y) < 20 &&
+                        player.x + player.size > car.x &&
+                        player.x < car.x + car.w) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+            
+            if (row.type === 'river') {
+                let onLog = false;
+                for (let log of logs) {
+                    if (Math.abs(log.y - player.y) < 20 &&
+                        player.x + player.size > log.x &&
+                        player.x < log.x + log.w) {
+                        onLog = true;
+                        player.x += log.speed * game.speed;
+                        break;
+                    }
+                }
+                if (!onLog) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            if (player.x < 0 || player.x > 1000 - player.size) {
+                gameOver();
+            }
+        }
+        
+        function gameOver() {
+            game.running = false;
+            menu.innerHTML = `
+                <h1>게임 오버!</h1>
+                <p>최종 점수: ${game.score}</p>
+                <p>이동 거리: ${game.distance}</p>
+                <button onclick="start()">다시 시작</button>
+            `;
+            menu.style.display = 'flex';
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, 1000, 600);
+            
+            // 레인 그리기
+            for (let row of rows) {
+                if (row.y < -40 || row.y > 600) continue;
+                
+                if (row.type === 'grass') {
+                    ctx.fillStyle = '#7CFC00';
+                } else if (row.type === 'road') {
+                    ctx.fillStyle = '#555';
+                } else {
+                    ctx.fillStyle = '#4169E1';
+                }
+                ctx.fillRect(0, row.y, 1000, 40);
+            }
+            
+            // 차 그리기
+            for (let car of cars) {
+                if (car.y < -40 || car.y > 600) continue;
+                ctx.fillStyle = car.color;
+                ctx.fillRect(car.x, car.y + 5, car.w, car.h);
+            }
+            
+            // 통나무 그리기
+            for (let log of logs) {
+                if (log.y < -40 || log.y > 600) continue;
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(log.x, log.y + 5, log.w, log.h);
+            }
+            
+            // 플레이어 그리기
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(player.x + player.size/2, player.y + player.size/2, player.size/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(player.x + 8, player.y + 8, 3, 0, Math.PI * 2);
+            ctx.arc(player.x + 17, player.y + 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // 키보드 입력
+        document.addEventListener('keydown', (e) => {
+            if (!game.running || player.moving) return;
+            
+            let moved = false;
+            
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                player.y -= 40;
+                moved = true;
+                game.distance++;
+                game.score += Math.floor(10 * game.speed);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                player.y += 40;
+                moved = true;
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (player.x > 0) {
+                    player.x -= 40;
+                    moved = true;
+                }
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (player.x < 960) {
+                    player.x += 40;
+                    moved = true;
+                }
+            }
+            
+            if (moved) {
+                player.moving = true;
+                setTimeout(() => player.moving = false, 100);
+            }
+        });
+    </script>
+</body>
+</html>
