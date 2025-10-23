@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>슈팅 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 60%;
+            background: #0a0a15;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40%;
+            background: rgba(20, 20, 40, 0.95);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        #topControls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            height: 25%;
+        }
+
+        .actionBtn {
+            background: linear-gradient(145deg, #ff6b6b, #ff5252);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .actionBtn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #mainControls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 75%;
+        }
+
+        #dpad {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-left: 20px;
+        }
+
+        .dpadBtn {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #4a4a6a, #3a3a5a);
+            border: 3px solid #fff;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .dpadBtn:active {
+            transform: scale(0.95);
+            background: linear-gradient(145deg, #5a5a7a, #4a4a6a);
+        }
+
+        #btnUp { top: 0; left: 50px; }
+        #btnDown { bottom: 0; left: 50px; }
+        #btnLeft { top: 50px; left: 0; }
+        #btnRight { top: 50px; right: 0; }
+        #btnCenter { top: 50px; left: 50px; background: #2a2a4a; pointer-events: none; }
+
+        #actionButtons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-right: 20px;
+        }
+
+        .actionBtnLarge {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(145deg, #ff6b6b, #ff5252);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .actionBtnLarge:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+
+        #btnDodge {
+            background: linear-gradient(145deg, #4ecdc4, #3dbdb4);
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+            font-weight: bold;
+        }
+
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #menu h1 {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 50px;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .menuBtn {
+            background: linear-gradient(145deg, #fff, #e0e0e0);
+            border: 4px solid #333;
+            padding: 20px 60px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            border-radius: 15px;
+            margin: 10px;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .menuBtn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        #characterSelect {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #characterSelect h2 {
+            color: white;
+            font-size: 36px;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        #characters {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .character {
+            width: 120px;
+            height: 140px;
+            background: rgba(255,255,255,0.2);
+            border: 4px solid transparent;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .character:active {
+            transform: scale(0.95);
+        }
+
+        .character.selected {
+            border-color: #ffeb3b;
+            background: rgba(255,255,255,0.4);
+            box-shadow: 0 0 20px #ffeb3b;
+        }
+
+        .characterSprite {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        .character p {
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+        }
+
+        #gameOver h2 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        #results {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            font-size: 20px;
+            text-align: left;
+        }
+
+        #results div {
+            margin: 10px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #chargeBar {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #chargeBarFill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a3f7);
+            transition: width 0.05s linear;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="menu">
+            <h1>슈팅 게임</h1>
+            <button class="menuBtn" onclick="startGame()">게임 시작</button>
+        </div>
+
+        <div id="characterSelect">
+            <h2>캐릭터 선택</h2>
+            <div id="characters">
+                <div class="character" data-char="0">
+                    <div class="characterSprite" style="background: linear-gradient(135deg, #ff6b6b, #ff8e53);"></div>
+                    <p>레드</p>
+                </div>
+                <div class="character" data-char="1">
+                    <div class="characterSprite" style="background: linear-gradient(135deg, #4ecdc4, #44a3f7);"></div>
+                    <p>블루</p>
+                </div>
+                <div class="character" data-char="2">
+                    <div class="characterSprite" style="background: linear-gradient(135deg, #95e1d3, #38ef7d);"></div>
+                    <p>그린</p>
+                </div>
+                <div class="character" data-char="3">
+                    <div class="characterSprite" style="background: linear-gradient(135deg, #f093fb, #f5576c);"></div>
+                    <p>핑크</p>
+                </div>
+            </div>
+            <button class="menuBtn" onclick="confirmCharacter()">선택</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="hud">
+            <div>스테이지: <span id="stageNum">1</span></div>
+            <div>점수: <span id="score">0</span></div>
+            <div id="timerDisplay" class="hidden">시간: <span id="timer">60</span>초</div>
+            <div id="bossHpDisplay" class="hidden">보스 HP: <span id="bossHp">100000</span></div>
+        </div>
+
+        <div id="chargeBar">
+            <div id="chargeBarFill"></div>
+        </div>
+
+        <div id="controls">
+            <div id="topControls">
+                <button class="actionBtn" onclick="showMenu()">메뉴</button>
+                <button class="actionBtn" onclick="goBack()">뒤로</button>
+            </div>
+            <div id="mainControls">
+                <div id="dpad">
+                    <button class="dpadBtn" id="btnUp">▲</button>
+                    <button class="dpadBtn" id="btnLeft">◄</button>
+                    <div class="dpadBtn" id="btnCenter"></div>
+                    <button class="dpadBtn" id="btnRight">►</button>
+                    <button class="dpadBtn" id="btnDown">▼</button>
+                </div>
+                <div id="actionButtons">
+                    <button class="actionBtnLarge" id="btnShoot">발사</button>
+                    <button class="actionBtnLarge" id="btnDodge">회피</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameOver">
+            <h2>게임 클리어!</h2>
+            <div id="results"></div>
+            <button class="menuBtn" onclick="returnToMenu()">메인 메뉴</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 400;
+        canvas.height = 600;
+
+        let gameState = 'menu';
+        let selectedCharacter = -1;
+        let stage = 1;
+        let score = 0;
+        let player = null;
+        let enemies = [];
+        let bullets = [];
+        let enemyBullets = [];
+        let particles = [];
+        let door = null;
+        let boss = null;
+        let stageTimer = 0;
+        let bossTimer = 60;
+        let keys = {up: false, down: false, left: false, right: false};
+        let isCharging = false;
+        let chargeTime = 0;
+        let isDodging = false;
+        let dodgeTime = 0;
+        let isStunned = false;
+        let stunTime = 0;
+        let stageResults = {
+            stage1Enemies: 0,
+            stage2Enemies: 0,
+            stage3Boss: false
+        };
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(freq, duration, type = 'sine') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            osc.type = type;
+            gain.gain.value = 0.1;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('characterSelect').style.display = 'flex';
+        }
+
+        function showMenu() {
+            if (gameState === 'playing') {
+                if (confirm('게임을 종료하고 메뉴로 돌아가시겠습니까?')) {
+                    returnToMenu();
+                }
+            }
+        }
+
+        function goBack() {
+            if (gameState === 'playing') {
+                showMenu();
+            }
+        }
+
+        function returnToMenu() {
+            gameState = 'menu';
+            stage = 1;
+            score = 0;
+            selectedCharacter = -1;
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            particles = [];
+            boss = null;
+            stageResults = {stage1Enemies: 0, stage2Enemies: 0, stage3Boss: false};
+            document.getElementById('menu').style.display = 'flex';
+            document.getElementById('characterSelect').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('timerDisplay').classList.add('hidden');
+            document.getElementById('bossHpDisplay').classList.add('hidden');
+        }
+
+        document.querySelectorAll('.character').forEach(char => {
+            char.addEventListener('click', function() {
+                document.querySelectorAll('.character').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedCharacter = parseInt(this.dataset.char);
+            });
+        });
+
+        function confirmCharacter() {
+            if (selectedCharacter === -1) {
+                alert('캐릭터를 선택해주세요!');
+                return;
+            }
+            document.getElementById('characterSelect').style.display = 'none';
+            initGame();
+        }
+
+        function initGame() {
+            gameState = 'playing';
+            stage = 1;
+            score = 0;
+            stageTimer = 0;
+            
+            const colors = [
+                'linear-gradient(135deg, #ff6b6b, #ff8e53)',
+                'linear-gradient(135deg, #4ecdc4, #44a3f7)',
+                'linear-gradient(135deg, #95e1d3, #38ef7d)',
+                'linear-gradient(135deg, #f093fb, #f5576c)'
+            ];
+            
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height - 80,
+                width: 30,
+                height: 30,
+                speed: 4,
+                color: selectedCharacter,
+                gradient: colors[selectedCharacter]
+            };
+
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            particles = [];
+            boss = null;
+            
+            updateHUD();
+            spawnDoor();
+            gameLoop();
+        }
+
+        function spawnDoor() {
+            if (stage < 3) {
+                door = {
+                    x: canvas.width / 2 - 25,
+                    y: 50,
+                    width: 50,
+                    height: 60
+                };
+            }
+        }
+
+        function spawnEnemy() {
+            if (stage === 3 || enemies.length >= getMaxEnemies()) return;
+            
+            const types = ['small', 'medium', 'large'];
+            const weights = stage === 1 ? [0.7, 0.2, 0.1] : [0.5, 0.3, 0.2];
+            const rand = Math.random();
+            let type;
+            
+            if (rand < weights[0]) type = 'small';
+            else if (rand < weights[0] + weights[1]) type = 'medium';
+            else type = 'large';
+            
+            const sizes = {small: 20, medium: 30, large: 40};
+            const hps = {small: 500, medium: 800, large: 1500};
+            const colors = {small: '#ff6b9d', medium: '#c44569', large: '#9b59b6'};
+            
+            enemies.push({
+                x: Math.random() * (canvas.width - sizes[type]),
+                y: -sizes[type],
+                width: sizes[type],
+                height: sizes[type],
+                speed: 1 + Math.random() * 2,
+                hp: hps[type],
+                maxHp: hps[type],
+                type: type,
+                color: colors[type],
+                shootTimer: Math.random() * 120 + 60,
+                movePattern: Math.random() < 0.5 ? 'straight' : 'zigzag',
+                zigzagDir: 1
+            });
+        }
+
+        function spawnBoss() {
+            boss = {
+                x: canvas.width / 2,
+                y: 100,
+                width: 80,
+                height: 80,
+                hp: 100000,
+                maxHp: 100000,
+                phase: 1,
+                pattern: 0,
+                patternTimer: 0,
+                shootTimer: 0,
+                moveDir: 1
+            };
+            bossTimer = 60;
+            document.getElementById('timerDisplay').classList.remove('hidden');
+            document.getElementById('bossHpDisplay').classList.remove('hidden');
+        }
+
+        function getMaxEnemies() {
+            return stage === 1 ? 5 : 7;
+        }
+
+        function updateHUD() {
+            document.getElementById('stageNum').textContent = stage;
+            document.getElementById('score').textContent = score;
+            if (boss) {
+                document.getElementById('bossHp').textContent = Math.max(0, boss.hp);
+            }
+        }
+
+        // 터치 컨트롤
+        document.getElementById('btnUp').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys.up = true;
+        });
+        document.getElementById('btnUp').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.up = false;
+        });
+        
+        document.getElementById('btnDown').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys.down = true;
+        });
+        document.getElementById('btnDown').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.down = false;
+        });
+        
+        document.getElementById('btnLeft').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys.left = true;
+        });
+        document.getElementById('btnLeft').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.left = false;
+        });
+        
+        document.getElementById('btnRight').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys.right = true;
+        });
+        document.getElementById('btnRight').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.right = false;
+        });
+
+        document.getElementById('btnShoot').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isCharging = true;
+            chargeTime = 0;
+            document.getElementById('chargeBar').style.display = 'block';
+        });
+
+        document.getElementById('btnShoot').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isCharging && !isStunned) {
+                shoot();
+            }
+            isCharging = false;
+            chargeTime = 0;
+            document.getElementById('chargeBar').style.display = 'none';
+        });
+
+        document.getElementById('btnDodge').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            dodge();
+        });
+
+        function shoot() {
+            if (isStunned) return;
+            
+            const isCharged = chargeTime >= 30;
+            
+            bullets.push({
+                x: player.x + player.width / 2,
+                y: player.y,
+                width: isCharged ? 12 : 6,
+                height: isCharged ? 12 : 6,
+                speed: 8,
+                damage: isCharged ? 500 : 100,
+                charged: isCharged
+            });
+            
+            playSound(isCharged ? 800 : 400, 0.1, 'square');
+        }
+
+        function dodge() {
+            if (isDodging || isStunned) return;
+            isDodging = true;
+            dodgeTime = 0;
+            playSound(600, 0.2, 'sawtooth');
+        }
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 30,
+                    color: color
+                });
+            }
+        }
+
+        function updateGame() {
+            if (gameState !== 'playing') return;
+
+            stageTimer++;
+
+            // 플레이어 이동
+            if (!isStunned) {
+                if (keys.up) player.y = Math.max(0, player.y - player.speed);
+                if (keys.down) player.y = Math.min(canvas.height - player.height, player.y + player.speed);
+                if (keys.left) player.x = Math.max(0, player.x - player.speed);
+                if (keys.right) player.x = Math.min(canvas.width - player.width, player.x + player.speed);
+            }
+
+            // 차징
+            if (isCharging && !isStunned) {
+                chargeTime++;
+                document.getElementById('chargeBarFill').style.width = Math.min(100, (chargeTime / 30) * 100) + '%';
+            }
+
+            // 회피
+            if (isDodging) {
+                dodgeTime++;
+                if (dodgeTime >= 42) { // 0.7초 (60fps 기준)
+                    isDodging = false;
+                    dodgeTime = 0;
+                }
+            }
+
+            // 스턴
+            if (isStunned) {
+                stunTime++;
+                if (stunTime >= 30) { // 0.5초
+                    isStunned = false;
+                    stunTime = 0;
+                }
+            }
+
+            // 보스전 타이머
+            if (stage === 3 && boss) {
+                if (stageTimer % 60 === 0) {
+                    bossTimer--;
+                    document.getElementById('timer').textContent = Math.max(0, bossTimer);
+                    if (bossTimer <= 0) {
+                        endGame(false);
+                        return;
+                    }
+                }
+            }
+
+            // 적 생성
+            if (stage < 3 && stageTimer % 90 === 0) {
+                spawnEnemy();
+            }
+
+            // 보스 생성
+            if (stage === 3 && !boss && stageTimer > 60) {
+                spawnBoss();
+            }
+
+            // 총알 업데이트
+            bullets = bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                return bullet.y > -bullet.height;
+            });
+
+            // 적 총알 업데이트
+            enemyBullets = enemyBullets.filter(bullet => {
+                bullet.y += bullet.speed;
+                
+                // 회피 중이면 반사
+                if (isDodging && checkCollision(bullet, player)) {
+                    bullet.speed = -bullet.speed;
+                    bullet.reflected = true;
+                    playSound(700, 0.1, 'triangle');
+                    return true;
+                }
+                
+                // 플레이어 피격
+                if (!isDodging && !isStunned && checkCollision(bullet, player)) {
+                    isStunned = true;
+                    stunTime = 0;
+                    playSound(200, 0.3, 'sawtooth');
+                    createParticles(player.x + player.width/2, player.y + player.height/2, '#ffeb3b', 15);
+                    return false;
+                }
+                
+                return bullet.y < canvas.height + bullet.height;
+            });
+
+            // 적 업데이트
+            enemies = enemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                
+                if (enemy.movePattern === 'zigzag') {
+                    enemy.x += enemy.zigzagDir * 1.5;
+                    if (enemy.x <= 0 || enemy.x >= canvas.width - enemy.width) {
+                        enemy.zigzagDir *= -1;
+                    }
+                }
+                
+                enemy.shootTimer--;
+                if (enemy.shootTimer <= 0) {
+                    enemyBullets.push({
+                        x: enemy.x + enemy.width / 2,
+                        y: enemy.y + enemy.height,
+                        width: 8,
+                        height: 8,
+                        speed: 3,
+                        reflected: false
+                    });
+                    enemy.shootTimer = Math.random() * 120 + 60;
+                    playSound(300, 0.1, 'sine');
+                }
+                
+                // 총알과 충돌
+                bullets.forEach((bullet, bIndex) => {
+                    if (checkCollision(bullet, enemy)) {
+                        enemy.hp -= bullet.damage;
+                        bullets.splice(bIndex, 1);
+                        playSound(500, 0.1, 'square');
+                        createParticles(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.color, 5);
+                        
+                        if (enemy.hp <= 0) {
+                            const points = {small: 10, medium: 20, large: 50};
+                            score += points[enemy.type];
+                            if (stage === 1) stageResults.stage1Enemies++;
+                            if (stage === 2) stageResults.stage2Enemies++;
+                            playSound(600, 0.2, 'square');
+                            createParticles(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.color, 20);
+                        }
+                    }
+                });
+                
+                // 반사된 총알과 충돌
+                enemyBullets.forEach((bullet, bIndex) => {
+                    if (bullet.reflected && checkCollision(bullet, enemy)) {
+                        enemy.hp -= 300;
+                        enemyBullets.splice(bIndex, 1);
+                        playSound(550, 0.1, 'triangle');
+                        createParticles(enemy.x + enemy.width/2, enemy.y + enemy.height/2, '#ffeb3b', 8);
+                        
+                        if (enemy.hp <= 0) {
+                            const points = {small: 10, medium: 20, large: 50};
+                            score += points[enemy.type];
+                            if (stage === 1) stageResults.stage1Enemies++;
+                            if (stage === 2) stageResults.stage2Enemies++;
+                            playSound(600, 0.2, 'square');
+                            createParticles(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.color, 20);
+                        }
+                    }
+                });
+                
+                return enemy.hp > 0 && enemy.y < canvas.height + 50;
+            });
+
+            // 보스 업데이트
+            if (boss) {
+                boss.patternTimer++;
+                boss.shootTimer++;
+                
+                // 보스 이동
+                boss.x += boss.moveDir * 2;
+                if (boss.x <= 0 || boss.x >= canvas.width - boss.width) {
+                    boss.moveDir *= -1;
+                }
+                
+                // 보스 패턴
+                if (boss.patternTimer >= 180) {
+                    boss.pattern = (boss.pattern + 1) % 3;
+                    boss.patternTimer = 0;
+                }
+                
+                // 패턴 1: 직선 발사
+                if (boss.pattern === 0 && boss.shootTimer >= 30) {
+                    enemyBullets.push({
+                        x: boss.x + boss.width / 2,
+                        y: boss.y + boss.height,
+                        width: 10,
+                        height: 10,
+                        speed: 4,
+                        reflected: false
+                    });
+                    boss.shootTimer = 0;
+                    playSound(250, 0.1, 'sine');
+                }
+                
+                // 패턴 2: 3방향 발사
+                if (boss.pattern === 1 && boss.shootTimer >= 45) {
+                    for (let angle = -30; angle <= 30; angle += 30) {
+                        const rad = (angle * Math.PI) / 180;
+                        enemyBullets.push({
+                            x: boss.x + boss.width / 2,
+                            y: boss.y + boss.height,
+                            width: 10,
+                            height: 10,
+                            speed: 4,
+                            vx: Math.sin(rad) * 3,
+                            vy: Math.cos(rad) * 4,
+                            reflected: false,
+                            spread: true
+                        });
+                    }
+                    boss.shootTimer = 0;
+                    playSound(220, 0.15, 'sine');
+                }
+                
+                // 패턴 3: 원형 발사
+                if (boss.pattern === 2 && boss.shootTimer >= 60) {
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i * 45 * Math.PI) / 180;
+                        enemyBullets.push({
+                            x: boss.x + boss.width / 2,
+                            y: boss.y + boss.height / 2,
+                            width: 8,
+                            height: 8,
+                            speed: 3,
+                            vx: Math.cos(angle) * 3,
+                            vy: Math.sin(angle) * 3,
+                            reflected: false,
+                            spread: true
+                        });
+                    }
+                    boss.shootTimer = 0;
+                    playSound(200, 0.2, 'sine');
+                }
+                
+                // 보스 총알과 플레이어 충돌
+                enemyBullets.forEach((bullet, index) => {
+                    if (bullet.spread) {
+                        bullet.x += bullet.vx;
+                        bullet.y += bullet.vy;
+                    }
+                    
+                    if (isDodging && checkCollision(bullet, player)) {
+                        if (!bullet.reflected) {
+                            bullet.vx = bullet.vx ? -bullet.vx : 0;
+                            bullet.vy = bullet.vy ? -bullet.vy : -bullet.speed;
+                            bullet.reflected = true;
+                            playSound(700, 0.1, 'triangle');
+                        }
+                    }
+                });
+                
+                // 보스와 총알 충돌
+                bullets.forEach((bullet, bIndex) => {
+                    if (checkCollision(bullet, boss)) {
+                        boss.hp -= bullet.damage;
+                        bullets.splice(bIndex, 1);
+                        playSound(450, 0.1, 'square');
+                        createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#9b59b6', 8);
+                        
+                        if (boss.hp <= 0) {
+                            score += 100;
+                            stageResults.stage3Boss = true;
+                            playSound(800, 0.5, 'square');
+                            createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#9b59b6', 50);
+                            endGame(true);
+                        }
+                    }
+                });
+                
+                // 반사된 총알과 보스 충돌
+                enemyBullets.forEach((bullet, bIndex) => {
+                    if (bullet.reflected && checkCollision(bullet, boss)) {
+                        boss.hp -= 300;
+                        enemyBullets.splice(bIndex, 1);
+                        playSound(550, 0.1, 'triangle');
+                        createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#ffeb3b', 10);
+                        
+                        if (boss.hp <= 0) {
+                            score += 100;
+                            stageResults.stage3Boss = true;
+                            playSound(800, 0.5, 'square');
+                            createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#9b59b6', 50);
+                            endGame(true);
+                        }
+                    }
+                });
+            }
+
+            // 파티클 업데이트
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                return p.life > 0;
+            });
+
+            // 문 충돌 체크
+            if (door && checkCollision(player, door)) {
+                nextStage();
+            }
+
+            updateHUD();
+        }
+
+        function nextStage() {
+            stage++;
+            if (stage > 3) {
+                endGame(true);
+                return;
+            }
+            
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            particles = [];
+            stageTimer = 0;
+            
+            if (stage === 3) {
+                door = null;
+            } else {
+                spawnDoor();
+            }
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 80;
+            
+            playSound(700, 0.3, 'triangle');
+        }
+
+        function endGame(won) {
+            gameState = 'gameOver';
+            
+            let resultsHTML = '<div>';
+            resultsHTML += `<div><strong>최종 점수: ${score}점</strong></div>`;
+            resultsHTML += `<div style="margin-top: 20px;">━━━━━━━━━━━━━━━━</div>`;
+            resultsHTML += `<div style="margin-top: 10px;">스테이지 1 격파: ${stageResults.stage1Enemies}마리 (${stageResults.stage1Enemies * 10}점)</div>`;
+            resultsHTML += `<div>스테이지 2 격파: ${stageResults.stage2Enemies}마리 (${stageResults.stage2Enemies * 10}점)</div>`;
+            
+            if (stage >= 3) {
+                if (stageResults.stage3Boss) {
+                    resultsHTML += `<div>보스 격파 성공! (+100점)</div>`;
+                } else {
+                    resultsHTML += `<div>보스 격파 실패 (+50점)</div>`;
+                    score += 50;
+                }
+            }
+            
+            resultsHTML += `<div style="margin-top: 20px;">━━━━━━━━━━━━━━━━</div>`;
+            resultsHTML += `<div style="margin-top: 10px; font-size: 24px; color: #ffeb3b;">총점: ${score}점</div>`;
+            resultsHTML += '</div>';
+            
+            document.getElementById('results').innerHTML = resultsHTML;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('timerDisplay').classList.add('hidden');
+            document.getElementById('bossHpDisplay').classList.add('hidden');
+            
+            updateHUD();
+        }
+
+        function drawGame() {
+            ctx.fillStyle = '#0a0a15';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 배경 별
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 137.508) % canvas.width;
+                const y = ((i * 137.508) + stageTimer) % canvas.height;
+                ctx.fillRect(x, y, 2, 2);
+            }
+
+            // 문 그리기
+            if (door) {
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(door.x, door.y, door.width, door.height);
+                ctx.fillStyle = '#2980b9';
+                ctx.fillRect(door.x + 10, door.y + 10, door.width - 20, door.height - 15);
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(door.x + door.width / 2 - 3, door.y + door.height / 2, 6, 10);
+            }
+
+            // 플레이어 그리기
+            if (player) {
+                ctx.save();
+                ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+                if (isDodging) {
+                    ctx.rotate((dodgeTime / 42) * Math.PI * 4);
+                }
+                
+                // 플레이어 본체
+                const colors = [
+                    ['#ff6b6b', '#ff8e53'],
+                    ['#4ecdc4', '#44a3f7'],
+                    ['#95e1d3', '#38ef7d'],
+                    ['#f093fb', '#f5576c']
+                ];
+                const [color1, color2] = colors[player.color];
+                
+                ctx.fillStyle = color1;
+                ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+                ctx.fillStyle = color2;
+                ctx.fillRect(-player.width / 2 + 5, -player.height / 2 + 5, player.width - 10, player.height - 10);
+                
+                // 눈
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-8, -8, 6, 6);
+                ctx.fillRect(2, -8, 6, 6);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-6, -6, 3, 3);
+                ctx.fillRect(4, -6, 3, 3);
+                
+                if (isStunned) {
+                    ctx.fillStyle = 'rgba(255, 235, 59, 0.5)';
+                    ctx.fillRect(-player.width / 2 - 5, -player.height / 2 - 5, player.width + 10, player.height + 10);
+                }
+                
+                ctx.restore();
+            }
+
+            // 적 그리기
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // 적 눈
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(enemy.x + 5, enemy.y + 5, 4, 4);
+                ctx.fillRect(enemy.x + enemy.width - 9, enemy.y + 5, 4, 4);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
+                ctx.fillRect(enemy.x + enemy.width - 8, enemy.y + 6, 2, 2);
+                
+                // 체력바
+                const hpPercent = enemy.hp / enemy.maxHp;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(enemy.x, enemy.y - 8, enemy.width, 4);
+                ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : hpPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                ctx.fillRect(enemy.x, enemy.y - 8, enemy.width * hpPercent, 4);
+            });
+
+            // 보스 그리기
+            if (boss) {
+                ctx.save();
+                ctx.fillStyle = '#9b59b6';
+                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+                ctx.fillStyle = '#8e44ad';
+                ctx.fillRect(boss.x + 10, boss.y + 10, boss.width - 20, boss.height - 20);
+                
+                // 보스 눈
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(boss.x + 15, boss.y + 20, 12, 12);
+                ctx.fillRect(boss.x + boss.width - 27, boss.y + 20, 12, 12);
+                
+                // 보스 입
+                ctx.fillStyle = '#000';
+                ctx.fillRect(boss.x + 20, boss.y + 50, boss.width - 40, 8);
+                
+                // 보스 체력바
+                const hpPercent = boss.hp / boss.maxHp;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(50, 20, canvas.width - 100, 15);
+                ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : hpPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                ctx.fillRect(50, 20, (canvas.width - 100) * hpPercent, 15);
+                
+                ctx.restore();
+            }
+
+            // 총알 그리기
+            bullets.forEach(bullet => {
+                if (bullet.charged) {
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillRect(bullet.x - 2, bullet.y - 2, bullet.width + 4, bullet.height + 4);
+                }
+                ctx.fillStyle = bullet.charged ? '#44a3f7' : '#f1c40f';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // 적 총알 그리기
+            enemyBullets.forEach(bullet => {
+                ctx.fillStyle = bullet.reflected ? '#2ecc71' : '#e74c3c';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // 파티클 그리기
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function gameLoop() {
+            if (gameState === 'playing') {
+                updateGame();
+                drawGame();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
+                        
