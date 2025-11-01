@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우주 슈팅 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #000428, #004e92);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        #gameCanvas {
+            border: 3px solid #00d4ff;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 10;
+        }
+
+        .score {
+            margin-bottom: 10px;
+        }
+
+        .lives {
+            color: #ff4444;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00d4ff;
+            display: none;
+            z-index: 100;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            color: #ff4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff4444;
+        }
+
+        .game-over p {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(to right, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .instructions {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 50px;
+            border-radius: 20px;
+            border: 3px solid #00d4ff;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .start-screen h1 {
+            color: #00d4ff;
+            font-size: 56px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00d4ff;
+        }
+
+        .start-screen p {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .start-btn {
+            background: linear-gradient(to right, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="start-screen" id="startScreen">
+            <h1>🚀 우주 슈팅 게임</h1>
+            <p>우주선을 조종하여 적을 격파하세요!</p>
+            <p style="font-size: 14px; margin-bottom: 20px;">
+                ← → 방향키: 이동<br>
+                스페이스바: 발사
+            </p>
+            <button class="start-btn" onclick="startGame()">게임 시작</button>
+        </div>
+
+        <div class="ui">
+            <div class="score">점수: <span id="score">0</span></div>
+            <div class="lives">❤️ <span id="lives">3</span></div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="game-over" id="gameOver">
+            <h2>GAME OVER</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button class="restart-btn" onclick="restartGame()">다시 시작</button>
+        </div>
+
+        <div class="instructions">
+            방향키로 이동 | 스페이스바로 발사
+        </div>
+    </div>
+
+    <script>
+        var canvas = document.getElementById('gameCanvas');
+        var ctx = canvas.getContext('2d');
+
+        var gameStarted = false;
+        var gameRunning = false;
+        var score = 0;
+        var lives = 3;
+
+        var player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 80,
+            width: 40,
+            height: 40,
+            speed: 5
+        };
+
+        var bullets = [];
+        var enemies = [];
+        var stars = [];
+        var particles = [];
+
+        var keys = {};
+
+        for (var i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                speed: Math.random() * 2 + 1
+            });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            keys[e.key] = true;
+            if (e.key === ' ' && gameRunning) {
+                e.preventDefault();
+                shootBullet();
+            }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            keys[e.key] = false;
+        });
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            gameStarted = true;
+            gameRunning = true;
+            score = 0;
+            lives = 3;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            updateUI();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').classList.remove('show');
+            startGame();
+        }
+
+        function shootBullet() {
+            bullets.push({
+                x: player.x + player.width / 2 - 2,
+                y: player.y,
+                width: 4,
+                height: 15,
+                speed: 7
+            });
+        }
+
+        function spawnEnemy() {
+            if (Math.random() < 0.02) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 40),
+                    y: -40,
+                    width: 40,
+                    height: 40,
+                    speed: 2 + Math.random() * 2
+                });
+            }
+        }
+
+        function createExplosion(x, y) {
+            for (var i = 0; i < 20; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color: '#ff' + Math.floor(Math.random() * 100 + 100).toString(16) + '00'
+                });
+            }
+        }
+
+        function updatePlayer() {
+            if (keys['ArrowLeft'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+        }
+
+        function updateBullets() {
+            for (var i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y -= bullets[i].speed;
+                if (bullets[i].y < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateEnemies() {
+            for (var i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].y += enemies[i].speed;
+                if (enemies[i].y > canvas.height) {
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+
+        function updateStars() {
+            for (var i = 0; i < stars.length; i++) {
+                stars[i].y += stars[i].speed;
+                if (stars[i].y > canvas.height) {
+                    stars[i].y = 0;
+                    stars[i].x = Math.random() * canvas.width;
+                }
+            }
+        }
+
+        function updateParticles() {
+            for (var i = particles.length - 1; i >= 0; i--) {
+                particles[i].x += particles[i].vx;
+                particles[i].y += particles[i].vy;
+                particles[i].life--;
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function checkCollisions() {
+            for (var i = bullets.length - 1; i >= 0; i--) {
+                for (var j = enemies.length - 1; j >= 0; j--) {
+                    if (bullets[i] && enemies[j] &&
+                        bullets[i].x < enemies[j].x + enemies[j].width &&
+                        bullets[i].x + bullets[i].width > enemies[j].x &&
+                        bullets[i].y < enemies[j].y + enemies[j].height &&
+                        bullets[i].y + bullets[i].height > enemies[j].y) {
+                        createExplosion(enemies[j].x + enemies[j].width / 2, enemies[j].y + enemies[j].height / 2);
+                        bullets.splice(i, 1);
+                        enemies.splice(j, 1);
+                        score += 10;
+                        updateUI();
+                        break;
+                    }
+                }
+            }
+
+            for (var i = enemies.length - 1; i >= 0; i--) {
+                if (enemies[i].x < player.x + player.width &&
+                    enemies[i].x + enemies[i].width > player.x &&
+                    enemies[i].y < player.y + player.height &&
+                    enemies[i].y + enemies[i].height > player.y) {
+                    createExplosion(enemies[i].x + enemies[i].width / 2, enemies[i].y + enemies[i].height / 2);
+                    enemies.splice(i, 1);
+                    lives--;
+                    updateUI();
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+        }
+
+        function drawStars() {
+            ctx.fillStyle = 'white';
+            for (var i = 0; i < stars.length; i++) {
+                ctx.fillRect(stars[i].x, stars[i].y, stars[i].size, stars[i].size);
+            }
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = '#00d4ff';
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width / 2, player.y);
+            ctx.lineTo(player.x, player.y + player.height);
+            ctx.lineTo(player.x + player.width / 2, player.y + player.height - 10);
+            ctx.lineTo(player.x + player.width, player.y + player.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(player.x + 10, player.y + 30, 5, 10);
+            ctx.fillRect(player.x + 25, player.y + 30, 5, 10);
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#ffff00';
+            for (var i = 0; i < bullets.length; i++) {
+                ctx.fillRect(bullets[i].x, bullets[i].y, bullets[i].width, bullets[i].height);
+            }
+        }
+
+        function drawEnemies() {
+            for (var i = 0; i < enemies.length; i++) {
+                ctx.fillStyle = '#ff4444';
+                ctx.beginPath();
+                ctx.arc(enemies[i].x + enemies[i].width / 2, enemies[i].y + enemies[i].height / 2, 
+                        enemies[i].width / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#cc0000';
+                ctx.fillRect(enemies[i].x + 5, enemies[i].y + 15, 10, 5);
+                ctx.fillRect(enemies[i].x + 25, enemies[i].y + 15, 10, 5);
+            }
+        }
+
+        function drawParticles() {
+            for (var i = 0; i < particles.length; i++) {
+                ctx.fillStyle = particles[i].color;
+                ctx.globalAlpha = particles[i].life / 30;
+                ctx.fillRect(particles[i].x, particles[i].y, 3, 3);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            updateStars();
+            drawStars();
+
+            updatePlayer();
+            updateBullets();
+            updateEnemies();
+            updateParticles();
+            checkCollisions();
+            spawnEnemy();
+
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+            drawParticles();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

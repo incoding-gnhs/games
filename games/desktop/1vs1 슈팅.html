@@ -105,8 +105,7 @@
         <canvas id="gameCanvas" width="1200" height="800"></canvas>
         
         <div id="ui">
-            <div>라운드: <span id="roundDisplay">1</span>/11</div>
-            <div>점수: 플레이어 <span id="team1Score">0</span> - <span id="team2Score">0</span> AI</div>
+            <div>연승: <span id="winStreakDisplay">0</span></div>
             <div>체력: <span id="healthDisplay">100</span></div>
             <div>돈: <span id="moneyDisplay">800</span>원</div>
             <div>무기: <span id="weaponDisplay">직사각형</span></div>
@@ -188,18 +187,17 @@
             
             // 게임 상태 초기화
             gameState = {
-                round: 1,
-                team1Score: 0,
-                team2Score: 0,
+                winStreak: 0,
                 roundTime: 120,
                 shopOpen: false,
-                gamePhase: 'shop'
+                gamePhase: 'shop',
+                enemyLevel: 1
             };
             
             // 플레이어 생성
             players = [
                 createPlayer(80, 80, 1, 1),
-                createPlayer(1120, 720, 2, 2)
+                createEnemyPlayer(1120, 720, 2, 2, gameState.enemyLevel)
             ];
             currentPlayer = players[0];
             
@@ -225,7 +223,44 @@
                 critReduction: 0,
                 speedBonus: 0,
                 lastShotTime: 0,
-                color: team === 1 ? '#ff4444' : '#4444ff'
+                color: team === 1 ? '#ff4444' : '#4444ff',
+                fireRate: 200
+            };
+        }
+
+        // 적 생성 함수 (레벨에 따라 강해짐)
+        function createEnemyPlayer(x, y, team, id, level) {
+            const healthBonus = (level - 1) * 15;
+            const speedBonus = Math.min((level - 1) * 0.2, 1.5);
+            const fireRateBonus = Math.max(200 - (level - 1) * 15, 100);
+            
+            // 레벨에 따라 무기 업그레이드
+            let weapon = 'rifle';
+            if (level >= 8) weapon = 'star';
+            else if (level >= 6) weapon = 'cross';
+            else if (level >= 4) weapon = 'square';
+            else if (level >= 2) weapon = 'diamond';
+            
+            return {
+                x: x,
+                y: y,
+                team: team,
+                id: id,
+                radius: 15,
+                health: 100 + healthBonus,
+                maxHealth: 100 + healthBonus,
+                speed: 3 + speedBonus,
+                money: 0,
+                alive: true,
+                primaryWeapon: weapon,
+                armor: null,
+                critReduction: 0,
+                speedBonus: 0,
+                lastShotTime: 0,
+                color: '#4444ff',
+                fireRate: fireRateBonus,
+                level: level,
+                aiAccuracy: Math.min(0.7 + (level - 1) * 0.05, 0.95)
             };
         }
 
@@ -289,7 +324,8 @@
         // 플레이어 사격
         function playerShoot(player) {
             const now = Date.now();
-            if (now - player.lastShotTime < 200) return;
+            const fireRate = player.fireRate || 200;
+            if (now - player.lastShotTime < fireRate) return;
             
             player.lastShotTime = now;
             
@@ -461,9 +497,69 @@
                     
                     movePlayer(aiPlayer, aiMoveX, aiMoveY);
                     
-                    // AI 사격
-                    if (Math.random() < 0.04 && dist < 350) {
-                        createBullet(aiPlayer, target.x, target.y, 'rifle');
+                    // AI 사격 (레벨에 따라 정확도와 발사 빈도 증가)
+                    const aiAccuracy = aiPlayer.aiAccuracy || 0.7;
+                    const shootChance = 0.04 + (aiPlayer.level - 1) * 0.01;
+                    
+                    if (Math.random() < shootChance && dist < 400) {
+                        const now = Date.now();
+                        const fireRate = aiPlayer.fireRate || 200;
+                        
+                        if (now - aiPlayer.lastShotTime >= fireRate) {
+                            aiPlayer.lastShotTime = now;
+                            
+                            // 정확도에 따라 조준점 흔들림
+                            const inaccuracy = (1 - aiAccuracy) * 100;
+                            const targetX = target.x + (Math.random() - 0.5) * inaccuracy;
+                            const targetY = target.y + (Math.random() - 0.5) * inaccuracy;
+                            
+                            if (aiPlayer.primaryWeapon === 'diamond') {
+                                const angle1 = Math.atan2(targetY - aiPlayer.y, targetX - aiPlayer.x) - 0.2;
+                                const angle2 = Math.atan2(targetY - aiPlayer.y, targetX - aiPlayer.x) + 0.2;
+                                
+                                bullets.push({
+                                    x: aiPlayer.x + Math.cos(angle1) * aiPlayer.radius,
+                                    y: aiPlayer.y + Math.sin(angle1) * aiPlayer.radius,
+                                    vx: Math.cos(angle1) * 8,
+                                    vy: Math.sin(angle1) * 8,
+                                    damage: 12,
+                                    owner: aiPlayer.id,
+                                    team: aiPlayer.team,
+                                    shape: 'diamond',
+                                    width: 6,
+                                    height: 6,
+                                    angle: angle1,
+                                    acceleration: 0,
+                                    penetrating: false
+                                });
+                                
+                                bullets.push({
+                                    x: aiPlayer.x + Math.cos(angle2) * aiPlayer.radius,
+                                    y: aiPlayer.y + Math.sin(angle2) * aiPlayer.radius,
+                                    vx: Math.cos(angle2) * 8,
+                                    vy: Math.sin(angle2) * 8,
+                                    damage: 12,
+                                    owner: aiPlayer.id,
+                                    team: aiPlayer.team,
+                                    shape: 'diamond',
+                                    width: 6,
+                                    height: 6,
+                                    angle: angle2,
+                                    acceleration: 0,
+                                    penetrating: false
+                                });
+                            } else {
+                                createBullet(aiPlayer, targetX, targetY, aiPlayer.primaryWeapon);
+                            }
+                            
+                            soundEffects.push({
+                                x: aiPlayer.x,
+                                y: aiPlayer.y,
+                                radius: 40,
+                                opacity: 0.6,
+                                growth: 2
+                            });
+                        }
                     }
                 }
                 
@@ -555,11 +651,11 @@
             if (team1Alive === 0 || team2Alive === 0 || gameState.roundTime <= 0) {
                 let winner = 0;
                 if (team1Alive > team2Alive) {
-                    winner = 1;
-                    gameState.team1Score++;
+                    winner = 1; // 플레이어 승리
                 } else if (team2Alive > team1Alive) {
-                    winner = 2;
-                    gameState.team2Score++;
+                    winner = 2; // AI 승리 (플레이어 패배)
+                } else {
+                    winner = 2; // 시간 초과는 플레이어 패배
                 }
                 
                 endRound(winner);
@@ -568,24 +664,28 @@
 
         // 라운드 종료
         function endRound(winner) {
-            gameState.gamePhase = 'shop';
-            
-            players.forEach(player => {
-                player.money = Math.min(4000, player.money + 300);
-                player.alive = true;
-                player.health = player.maxHealth;
-            });
-            
-            gameState.round++;
-            gameState.roundTime = 120;
-            
-            if (gameState.team1Score >= 6 || gameState.team2Score >= 6) {
-                endGame();
+            if (winner === 2) {
+                // 플레이어가 패배하면 게임 오버
+                endGame(false);
                 return;
             }
             
+            // 플레이어가 승리하면
+            gameState.winStreak++;
+            gameState.enemyLevel++;
+            gameState.gamePhase = 'shop';
+            
+            // 플레이어 보상
+            currentPlayer.money = Math.min(4000, currentPlayer.money + 300);
+            currentPlayer.alive = true;
+            currentPlayer.health = currentPlayer.maxHealth;
+            
+            gameState.roundTime = 120;
+            
             setTimeout(() => {
                 if (gameState.gamePhase === 'shop') {
+                    // 새로운 적 생성 (레벨 업)
+                    players[1] = createEnemyPlayer(1120, 720, 2, 2, gameState.enemyLevel);
                     startRound();
                 }
             }, 2000);
@@ -605,10 +705,13 @@
         }
 
         // 게임 종료
-        function endGame() {
+        function endGame(playerWon = true) {
             gameState.gamePhase = 'ended';
-            const winner = gameState.team1Score > gameState.team2Score ? '플레이어' : 'AI';
-            document.getElementById('gameResult').textContent = `${winner} 승리!`;
+            if (playerWon) {
+                document.getElementById('gameResult').textContent = `축하합니다! 최종 연승: ${gameState.winStreak}`;
+            } else {
+                document.getElementById('gameResult').textContent = `게임 오버! 연승 기록: ${gameState.winStreak}`;
+            }
             document.getElementById('gameOver').style.display = 'block';
         }
 
@@ -737,15 +840,22 @@
                 ctx.font = '24px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText('라운드 준비 중... Space로 상점 열기', 600, 50);
-                ctx.fillText('1 vs 1 듀얼!', 600, 80);
+                
+                const enemy = players[1];
+                const enemyWeaponNames = {
+                    rifle: '직사각형',
+                    square: '정사각형', 
+                    diamond: '마름모',
+                    star: '별',
+                    cross: '십자'
+                };
+                ctx.fillText(`적 레벨: ${enemy.level} | 체력: ${enemy.maxHealth} | 무기: ${enemyWeaponNames[enemy.primaryWeapon]}`, 600, 80);
             }
         }
 
         // UI 업데이트
         function updateUI() {
-            document.getElementById('roundDisplay').textContent = gameState.round;
-            document.getElementById('team1Score').textContent = gameState.team1Score;
-            document.getElementById('team2Score').textContent = gameState.team2Score;
+            document.getElementById('winStreakDisplay').textContent = gameState.winStreak;
             document.getElementById('healthDisplay').textContent = Math.ceil(currentPlayer.health);
             document.getElementById('moneyDisplay').textContent = currentPlayer.money;
             

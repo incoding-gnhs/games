@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스페이스 슈터 - 경쟁 모드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(180deg, #0a0a1a 0%, #1a1a3a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        #gameContainer {
+            background: #1f2937;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #22d3ee;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #22d3ee;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 4px solid #22d3ee;
+            border-radius: 10px;
+            background: #000;
+        }
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #menu, #gameOver {
+            text-align: center;
+            padding: 20px;
+        }
+        .section {
+            background: #374151;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .section h2 {
+            color: #22d3ee;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        .section p {
+            margin: 10px 0;
+            text-align: left;
+        }
+        button {
+            background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 20px 0;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .hidden {
+            display: none;
+        }
+        #difficultyInfo {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        .highlight {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .trophy {
+            color: #fbbf24;
+            font-size: 2rem;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>🚀 스페이스 슈터 🚀</h1>
+        
+        <div id="menu">
+            <div class="section">
+                <h2>게임 규칙</h2>
+                <p>• 적을 처치하여 점수를 획득하세요</p>
+                <p>• 연속으로 처치하면 콤보 보너스가 적용됩니다</p>
+                <p>• 시간이 지날수록 난이도가 상승합니다</p>
+                <p>• 적 종류: <span style="color:#ff4444">빨강(100점)</span>, <span style="color:#ff8800">주황(150점)</span>, <span style="color:#8844ff">보라(300점)</span></p>
+            </div>
+            
+            <div class="section">
+                <h2>조작법</h2>
+                <p>• 이동: WASD 또는 방향키</p>
+                <p>• 발사: 스페이스바 (연타 가능)</p>
+            </div>
+            
+            <div id="highScoreDisplay" class="hidden">
+                <div class="trophy">🏆</div>
+                <p style="font-size:1.5rem; color:#fbbf24;">최고 점수: <span id="highScoreText">0</span></p>
+            </div>
+            
+            <button onclick="startGame()">게임 시작</button>
+        </div>
+        
+        <div id="gamePlay" class="hidden">
+            <div id="ui">
+                <div class="stat">❤️ 체력: <span id="healthText">100</span>%</div>
+                <div class="stat">🎯 점수: <span id="scoreText">0</span></div>
+                <div class="stat">⚡ 콤보: <span id="comboText">0</span>x</div>
+                <div class="stat">⏱️ <span id="timeText">0:00</span></div>
+            </div>
+            
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div id="difficultyInfo">난이도 배율: x<span id="difficultyText">1.0</span></div>
+        </div>
+        
+        <div id="gameOver" class="hidden">
+            <div class="section">
+                <h2 style="color:#ef4444; font-size:2rem;">게임 오버!</h2>
+                <p style="font-size:1.3rem; margin:15px 0;">최종 점수: <span class="highlight" id="finalScoreText">0</span></p>
+                <p style="font-size:1.1rem;">생존 시간: <span id="finalTimeText">0:00</span></p>
+                <p style="font-size:1.1rem;">최대 콤보: <span id="finalComboText">0</span>x</p>
+                <div id="newRecord" class="hidden">
+                    <div class="trophy">🏆 신기록 달성! 🏆</div>
+                </div>
+            </div>
+            
+            <button onclick="startGame()">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        var canvas = document.getElementById('gameCanvas');
+        var ctx = canvas.getContext('2d');
+        
+        var gameState = 'menu';
+        var score = 0;
+        var combo = 0;
+        var maxCombo = 0;
+        var health = 100;
+        var timeElapsed = 0;
+        var highScore = 0;
+        
+        var player = { x: 400, y: 500, width: 40, height: 40 };
+        var bullets = [];
+        var enemies = [];
+        var particles = [];
+        var powerups = [];
+        
+        var lastShot = 0;
+        var lastComboTime = 0;
+        var difficultyMultiplier = 1;
+        var enemySpawnRate = 1000;
+        var lastEnemySpawn = 0;
+        var startTime = 0;
+        var animationId = null;
+        
+        var keys = {};
+        
+        window.addEventListener('keydown', function(e) {
+            keys[e.key] = true;
+            if (e.key === ' ' && gameState === 'playing') {
+                e.preventDefault();
+                shootBullet();
+            }
+        });
+        
+        window.addEventListener('keyup', function(e) {
+            keys[e.key] = false;
+        });
+        
+        function shootBullet() {
+            var now = Date.now();
+            if (now - lastShot > 150) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 3,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    speed: 12
+                });
+                lastShot = now;
+            }
+        }
+        
+        function spawnEnemy() {
+            var types = ['normal', 'fast', 'tank'];
+            var weights = [0.6, 0.3, 0.1];
+            
+            var random = Math.random();
+            var type = 'normal';
+            var cumulative = 0;
+            
+            for (var i = 0; i < types.length; i++) {
+                cumulative += weights[i];
+                if (random <= cumulative) {
+                    type = types[i];
+                    break;
+                }
+            }
+            
+            var enemyConfig = {
+                normal: { width: 40, height: 40, speed: 2, health: 1, color: '#ff4444', points: 100 },
+                fast: { width: 30, height: 30, speed: 4, health: 1, color: '#ff8800', points: 150 },
+                tank: { width: 50, height: 50, speed: 1, health: 3, color: '#8844ff', points: 300 }
+            };
+            
+            var config = enemyConfig[type];
+            
+            enemies.push({
+                x: Math.random() * (800 - config.width),
+                y: -config.height,
+                width: config.width,
+                height: config.height,
+                speed: config.speed,
+                health: config.health,
+                maxHealth: config.health,
+                color: config.color,
+                points: config.points,
+                type: type
+            });
+        }
+        
+        function spawnPowerup(x, y) {
+            if (Math.random() < 0.3) {
+                powerups.push({
+                    x: x - 10,
+                    y: y - 10,
+                    width: 20,
+                    height: 20,
+                    type: 'health'
+                });
+            }
+        }
+        
+        function createParticles(x, y, color) {
+            for (var i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    color: color
+                });
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('healthText').textContent = health;
+            document.getElementById('scoreText').textContent = score.toLocaleString();
+            
+            var comboBonus = combo >= 5 ? ' (+' + Math.floor(combo / 5) * 100 + '%)' : '';
+            document.getElementById('comboText').textContent = combo + comboBonus;
+            
+            var mins = Math.floor(timeElapsed / 60);
+            var secs = timeElapsed % 60;
+            var secStr = secs < 10 ? '0' + secs : secs;
+            document.getElementById('timeText').textContent = mins + ':' + secStr;
+            
+            document.getElementById('difficultyText').textContent = difficultyMultiplier.toFixed(1);
+        }
+        
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            health = 100;
+            timeElapsed = 0;
+            
+            player = { x: 400, y: 500, width: 40, height: 40 };
+            bullets = [];
+            enemies = [];
+            particles = [];
+            powerups = [];
+            
+            lastShot = 0;
+            lastComboTime = Date.now();
+            difficultyMultiplier = 1;
+            enemySpawnRate = 1000;
+            lastEnemySpawn = 0;
+            startTime = Date.now();
+            
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('gamePlay').classList.remove('hidden');
+            document.getElementById('gameOver').classList.add('hidden');
+            
+            updateUI();
+            gameLoop();
+        }
+        
+        function endGame() {
+            gameState = 'gameover';
+            
+            document.getElementById('gamePlay').classList.add('hidden');
+            document.getElementById('gameOver').classList.remove('hidden');
+            
+            document.getElementById('finalScoreText').textContent = score.toLocaleString();
+            var mins = Math.floor(timeElapsed / 60);
+            var secs = timeElapsed % 60;
+            var secStr = secs < 10 ? '0' + secs : secs;
+            document.getElementById('finalTimeText').textContent = mins + ':' + secStr;
+            document.getElementById('finalComboText').textContent = maxCombo;
+            
+            if (score > highScore) {
+                highScore = score;
+                document.getElementById('highScoreText').textContent = highScore.toLocaleString();
+                document.getElementById('highScoreDisplay').classList.remove('hidden');
+                document.getElementById('newRecord').classList.remove('hidden');
+            } else {
+                document.getElementById('newRecord').classList.add('hidden');
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        function gameLoop() {
+            if (gameState !== 'playing') return;
+            
+            var now = Date.now();
+            var elapsed = Math.floor((now - startTime) / 1000);
+            timeElapsed = elapsed;
+            
+            difficultyMultiplier = 1 + (elapsed / 60) * 3;
+            enemySpawnRate = Math.max(200, 1000 - elapsed * 13);
+            
+            var speed = 6;
+            if (keys['ArrowLeft'] || keys['a']) {
+                player.x = Math.max(0, player.x - speed);
+            }
+            if (keys['ArrowRight'] || keys['d']) {
+                player.x = Math.min(800 - player.width, player.x + speed);
+            }
+            if (keys['ArrowUp'] || keys['w']) {
+                player.y = Math.max(0, player.y - speed);
+            }
+            if (keys['ArrowDown'] || keys['s']) {
+                player.y = Math.min(600 - player.height, player.y + speed);
+            }
+            
+            if (now - lastEnemySpawn > enemySpawnRate) {
+                spawnEnemy();
+                lastEnemySpawn = now;
+            }
+            
+            bullets = bullets.filter(function(bullet) {
+                bullet.y -= bullet.speed;
+                return bullet.y > -bullet.height;
+            });
+            
+            enemies = enemies.filter(function(enemy) {
+                enemy.y += enemy.speed * difficultyMultiplier;
+                
+                var hit = false;
+                bullets = bullets.filter(function(bullet) {
+                    if (!hit &&
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        
+                        enemy.health -= 1;
+                        createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                        hit = true;
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (enemy.health <= 0) {
+                    var comboBonus = Math.floor(combo / 5);
+                    var points = Math.floor(enemy.points * (1 + comboBonus));
+                    score += points;
+                    combo++;
+                    if (combo > maxCombo) maxCombo = combo;
+                    lastComboTime = now;
+                    createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#ffff00');
+                    spawnPowerup(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                    return false;
+                }
+                
+                if (enemy.x < player.x + player.width &&
+                    enemy.x + enemy.width > player.x &&
+                    enemy.y < player.y + player.height &&
+                    enemy.y + enemy.height > player.y) {
+                    
+                    health = Math.max(0, health - 20);
+                    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ff0000');
+                    return false;
+                }
+                
+                if (enemy.y > 600) {
+                    combo = 0;
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            powerups = powerups.filter(function(powerup) {
+                powerup.y += 3;
+                
+                if (powerup.x < player.x + player.width &&
+                    powerup.x + powerup.width > player.x &&
+                    powerup.y < player.y + player.height &&
+                    powerup.y + powerup.height > player.y) {
+                    
+                    health = Math.min(100, health + 20);
+                    return false;
+                }
+                
+                return powerup.y < 600;
+            });
+            
+            particles = particles.filter(function(p) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 1;
+                return p.life > 0;
+            });
+            
+            if (now - lastComboTime > 3000 && combo > 0) {
+                combo = 0;
+            }
+            
+            if (health <= 0) {
+                endGame();
+                return;
+            }
+            
+            updateUI();
+            draw();
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        function draw() {
+            var gradient = ctx.createLinearGradient(0, 0, 0, 600);
+            gradient.addColorStop(0, '#0a0a1a');
+            gradient.addColorStop(1, '#1a1a3a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 800, 600);
+            
+            ctx.fillStyle = '#ffffff';
+            var now = Date.now();
+            for (var i = 0; i < 100; i++) {
+                var x = (i * 137.5) % 800;
+                var y = ((i * 137.5 + now * 0.05) % 600);
+                ctx.fillRect(x, y, 2, 2);
+            }
+            
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            }
+            ctx.globalAlpha = 1;
+            
+            ctx.fillStyle = '#00ffff';
+            for (var i = 0; i < bullets.length; i++) {
+                var bullet = bullets[i];
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            }
+            
+            for (var i = 0; i < enemies.length; i++) {
+                var enemy = enemies[i];
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                if (enemy.type === 'tank') {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(enemy.x, enemy.y - 8, enemy.width, 4);
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(enemy.x, enemy.y - 8, enemy.width * (enemy.health / enemy.maxHealth), 4);
+                }
+            }
+            
+            for (var i = 0; i < powerups.length; i++) {
+                var powerup = powerups[i];
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(powerup.x, powerup.y, 20, 20);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.fillText('+', powerup.x + 6, powerup.y + 15);
+            }
+            
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = '#88ff88';
+            ctx.fillRect(player.x + 5, player.y + 5, 30, 30);
+        }
+    </script>
+</body>
+</html>

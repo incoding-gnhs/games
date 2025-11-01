@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>유리잔 깨기 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .glass-container {
+            position: relative;
+            width: 200px;
+            height: 250px;
+            margin: 30px auto;
+        }
+
+        .glass {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(200, 230, 255, 0.6));
+            border: 3px solid rgba(100, 150, 200, 0.5);
+            border-radius: 10px 10px 50px 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                inset 0 0 30px rgba(255, 255, 255, 0.5),
+                0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass.shaking {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(-5px) rotate(-2deg); }
+            75% { transform: translateX(5px) rotate(2deg); }
+        }
+
+        .crack {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .crack-line {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.3);
+            transform-origin: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .crack-line.visible {
+            opacity: 1;
+        }
+
+        .shard {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(200, 230, 255, 0.5));
+            border: 1px solid rgba(100, 150, 200, 0.3);
+            pointer-events: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            gap: 10px;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .volume-bar-container {
+            margin: 20px 0;
+        }
+
+        .volume-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .volume-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+            transition: width 0.1s ease;
+            border-radius: 15px;
+        }
+
+        .threshold-marker {
+            position: absolute;
+            right: 30%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 0, 0, 0.5);
+        }
+
+        .warning {
+            text-align: center;
+            color: #F44336;
+            font-weight: bold;
+            margin: 10px 0;
+            min-height: 24px;
+            font-size: 14px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            margin-top: 20px;
+        }
+
+        .restart-button {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            margin-top: 20px;
+        }
+
+        .game-over {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .final-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .game-over-text {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .instructions strong {
+            color: #667eea;
+        }
+
+        .difficulty-indicator {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔊 유리잔 깨기 게임</h1>
+        <p class="subtitle">큰 소리로 유리잔을 깨뜨리세요!</p>
+
+        <div id="startScreen">
+            <div class="instructions">
+                <strong>게임 방법:</strong><br>
+                • 마이크에 대고 큰 소리를 내세요!<br>
+                • 소리가 클수록 유리잔에 금이 빨리 갑니다<br>
+                • 빠르게 깨뜨릴수록 높은 점수!<br>
+                • 시간이 지날수록 더 큰 소리가 필요합니다
+            </div>
+            <button class="button start-button" ontouchstart="startGame()" onclick="startGame()">게임 시작</button>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-label">시간</div>
+                    <div class="stat-value" id="timer">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">균열도</div>
+                    <div class="stat-value" id="damage">0%</div>
+                </div>
+            </div>
+
+            <div class="glass-container">
+                <div class="glass" id="glass">
+                    <div class="crack" id="crack"></div>
+                </div>
+            </div>
+
+            <div class="volume-bar-container">
+                <div class="volume-label">
+                    <span>소음 레벨</span>
+                    <span id="volumePercent">0%</span>
+                </div>
+                <div class="volume-bar">
+                    <div class="volume-fill" id="volumeFill"></div>
+                    <div class="threshold-marker"></div>
+                </div>
+            </div>
+
+            <div class="warning" id="warning"></div>
+            <div class="difficulty-indicator" id="difficultyIndicator">난이도: 쉬움</div>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <div class="game-over">
+                <div class="game-over-text">💥 유리잔 파괴 완료!</div>
+                <div class="final-score" id="finalScore">0</div>
+                <div class="stat-label">최종 점수</div>
+                <button class="button restart-button" ontouchstart="restartGame()" onclick="restartGame()">다시 하기</button>
+            </div>
+        </div>
+    </div>
+
+ <script>
+        //  Changed game objective to breaking the glass instead of protecting it
+        
+        // Prevent keyboard input
+        document.addEventListener('keydown', (e) => e.preventDefault());
+        document.addEventListener('keyup', (e) => e.preventDefault());
+        document.addEventListener('keypress', (e) => e.preventDefault());
+
+        let audioContext;
+        let analyser;
+        let microphone;
+        let dataArray;
+        let gameActive = false;
+        let startTime;
+        let damageLevel = 0;
+        let animationFrame;
+        let crackLines = [];
+        let noiseThreshold = 30; //  Starting threshold for noise detection
+        let difficultyMultiplier = 1;
+
+        async function startGame() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                microphone.connect(analyser);
+                
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                
+                gameActive = true;
+                startTime = Date.now();
+                damageLevel = 0;
+                crackLines = [];
+                
+                gameLoop();
+            } catch (error) {
+                alert('마이크 접근 권한이 필요합니다!');
+            }
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const volume = Math.min(100, (average / 128) * 100);
+            
+            //  Increase difficulty over time - require louder sounds
+            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            difficultyMultiplier = 2 + (elapsedSeconds / 60); // Increases by 1 every minute
+            const adjustedThreshold = noiseThreshold * difficultyMultiplier;
+            
+            // Update difficulty indicator
+            let difficultyText = '쉬움';
+            if (difficultyMultiplier > 2.5) difficultyText = '매우 어려움';
+            else if (difficultyMultiplier > 2) difficultyText = '어려움';
+            else if (difficultyMultiplier > 1.5) difficultyText = '보통';
+            document.getElementById('difficultyIndicator').textContent = 
+                `난이도: ${difficultyText} (필요 소음: ${Math.round(adjustedThreshold)}%)`;
+            
+            document.getElementById('volumeFill').style.width = volume + '%';
+            document.getElementById('volumePercent').textContent = Math.round(volume) + '%';
+            
+            //  Damage increases when volume is HIGH (above threshold)
+            if (volume > adjustedThreshold) {
+                const damageIncrease = (volume - adjustedThreshold) / 10;
+                damageLevel = Math.min(100, damageLevel + damageIncrease);
+                
+                document.getElementById('glass').classList.add('shaking');
+                setTimeout(() => {
+                    document.getElementById('glass').classList.remove('shaking');
+                }, 300);
+                
+                if (Math.random() < 0.3 && crackLines.length < 15) {
+                    addCrack();
+                }
+                
+                document.getElementById('warning').textContent = '💥 깨지는 중...';
+            } else {
+                //  Show encouragement to make noise
+                if (volume < adjustedThreshold / 2) {
+                    document.getElementById('warning').textContent = '🔊 더 큰 소리를 내세요!';
+                } else {
+                    document.getElementById('warning').textContent = '조금만 더!';
+                }
+            }
+            
+            document.getElementById('damage').textContent = Math.round(damageLevel) + '%';
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed + 's';
+            
+            if (damageLevel >= 100) {
+                endGame();
+                return;
+            }
+            
+            animationFrame = requestAnimationFrame(gameLoop);
+        }
+
+        function addCrack() {
+            const crack = document.createElement('div');
+            crack.className = 'crack-line visible';
+            
+            const startX = Math.random() * 100;
+            const startY = Math.random() * 100;
+            const angle = Math.random() * 360;
+            const length = 30 + Math.random() * 70;
+            
+            crack.style.left = startX + '%';
+            crack.style.top = startY + '%';
+            crack.style.width = length + 'px';
+            crack.style.height = '2px';
+            crack.style.transform = `rotate(${angle}deg)`;
+            
+            document.getElementById('crack').appendChild(crack);
+            crackLines.push(crack);
+        }
+
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationFrame);
+            
+            //  Calculate score based on speed - faster = higher score
+            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            // Base score of 10000, minus time penalty, plus difficulty bonus
+            const timeScore = Math.max(0, 10000 - (elapsedSeconds * 100));
+            const difficultyBonus = (difficultyMultiplier - 1) * 1000;
+            const finalScore = Math.round(timeScore + difficultyBonus);
+            
+            createShatterEffect();
+            
+            setTimeout(() => {
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+                document.getElementById('finalScore').textContent = finalScore.toLocaleString();
+            }, 1000);
+            
+            if (audioContext) {
+                audioContext.close();
+            }
+        }
+
+        function createShatterEffect() {
+            const glass = document.getElementById('glass');
+            glass.style.opacity = '0';
+            
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const shard = document.createElement('div');
+                    shard.className = 'shard';
+                    
+                    const size = 20 + Math.random() * 40;
+                    shard.style.width = size + 'px';
+                    shard.style.height = size + 'px';
+                    shard.style.left = (Math.random() * 100) + '%';
+                    shard.style.top = (Math.random() * 100) + '%';
+                    
+                    const angle = Math.random() * 360;
+                    const distance = 100 + Math.random() * 200;
+                    const tx = Math.cos(angle * Math.PI / 180) * distance;
+                    const ty = Math.sin(angle * Math.PI / 180) * distance;
+                    
+                    shard.style.transition = 'all 1s ease-out';
+                    glass.appendChild(shard);
+                    
+                    setTimeout(() => {
+                        shard.style.transform = `translate(${tx}px, ${ty}px) rotate(${Math.random() * 720}deg)`;
+                        shard.style.opacity = '0';
+                    }, 10);
+                }, i * 30);
+            }
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+            
+            document.getElementById('glass').style.opacity = '1';
+            document.getElementById('glass').innerHTML = '<div class="crack" id="crack"></div>';
+            document.getElementById('warning').textContent = '';
+            
+            damageLevel = 0;
+            crackLines = [];
+            difficultyMultiplier = 1;
+        }
+    </script>
+
+</body>
+</html>

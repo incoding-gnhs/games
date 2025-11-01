@@ -1,9 +1,38 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
+import 'dotenv/config';
+import express from 'express';
+import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ES6 모듈에서 __dirname 사용을 위한 설정
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 80;
+
+// MongoDB 연결
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/games', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB 연결 성공'))
+.catch(err => console.error('MongoDB 연결 실패:', err));
+
+// MongoDB 연결 이벤트 핸들러
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose가 MongoDB에 연결되었습니다.');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose 연결 오류:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose 연결이 해제되었습니다.');
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -15,52 +44,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// 데스크탑 게임 목록 API
-app.get('/api/desktop-games', (req, res) => {
-  const desktopDir = path.join(__dirname, 'games', 'desktop');
-  
-  fs.readdir(desktopDir, (err, files) => {
-    if (err) {
-      return res.status(500).json({ error: '파일 목록을 읽을 수 없습니다.' });
-    }
-    
-    // .html 파일만 필터링
-    const htmlFiles = files.filter(file => file.endsWith('.html'));
-    res.json(htmlFiles);
-  });
-});
-
-// 모바일 게임 목록 API
-app.get('/api/mobile-games', (req, res) => {
-  const mobileDir = path.join(__dirname, 'games', 'mobile');
-  
-  fs.readdir(mobileDir, (err, files) => {
-    if (err) {
-      return res.status(500).json({ error: '파일 목록을 읽을 수 없습니다.' });
-    }
-    
-    // .html 파일만 필터링
-    const htmlFiles = files.filter(file => file.endsWith('.html'));
-    res.json(htmlFiles);
-  });
-});
-
-// 데스크탑 게임 파일 서빙
-app.get('/desktop/:filename', (req, res) => {
+// games 폴더의 모든 서브폴더 게임 파일 서빙
+app.get('/games/:folder/:filename', (req, res) => {
+  const folder = req.params.folder;
   const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'games', 'desktop', filename);
-
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.status(404).send('해당 게임을 찾을 수 없습니다.');
-    }
-  });
-});
-
-// 모바일 게임 파일 서빙
-app.get('/mobile/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'games', 'mobile', filename);
+  const filePath = path.join(__dirname, 'games', folder, filename);
 
   res.sendFile(filePath, (err) => {
     if (err) {

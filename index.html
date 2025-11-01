@@ -128,49 +128,32 @@
     </div>
 
     <script>
-        // 게임 파일 목록 (서버에서 동적으로 가져옴)
-        let desktopGames = [];
-        let mobileGames = [];
+        // 게임 파일 목록 (하드코딩)
+        const allGames = [
+            { name: '유리잔-깨기.html', folder: 'all' },
+            { name: '턴제 배틀.html', folder: 'all' },
+            { name: '피아노 타일.html', folder: 'all' }
+        ];
 
-        // 서버에서 데스크탑 게임 목록 가져오기
-        async function fetchDesktopGames() {
-            try {
-                const response = await fetch('/api/desktop-games');
-                if (response.ok) {
-                    desktopGames = await response.json();
-                    renderGames(); // 파일 목록을 가져온 후 렌더링
-                } else {
-                    console.error('데스크탑 게임 목록을 가져올 수 없습니다.');
-                    showError('gamesGrid', '데스크탑 게임 목록을 불러오는데 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('서버 연결 오류:', error);
-                showError('gamesGrid', '서버에 연결할 수 없습니다.');
-            }
-        }
+        const desktopOnlyGames = [
+            { name: '1vs1 슈팅.html', folder: 'desktop' },
+            { name: '레인 피하기.html', folder: 'desktop' },
+            { name: '우주 슈팅.html', folder: 'desktop' },
+            { name: 'mobile-shooter-game - 20701강병률.html', folder: 'desktop' },
+            { name: 'space-shooter-competitive - 20606김견우.html', folder: 'desktop' },
+            { name: 'subway_runner_game - 20725장호연.html', folder: 'desktop' }
+        ];
 
-        // 서버에서 모바일 게임 목록 가져오기
-        async function fetchMobileGames() {
-            try {
-                const response = await fetch('/api/mobile-games');
-                if (response.ok) {
-                    mobileGames = await response.json();
-                    renderMobileGames(); // 파일 목록을 가져온 후 렌더링
-                } else {
-                    console.error('모바일 게임 목록을 가져올 수 없습니다.');
-                    showError('mobileGamesGrid', '모바일 게임 목록을 불러오는데 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('서버 연결 오류:', error);
-                showError('mobileGamesGrid', '서버에 연결할 수 없습니다.');
-            }
-        }
+        const mobileOnlyGames = [
+            { name: '스네이크.html', folder: 'mobile' },
+            { name: 'crossy_road_game.html', folder: 'mobile' }
+        ];
 
-        // 에러 메시지 표시
-        function showError(gridId, message) {
-            const gamesGrid = document.getElementById(gridId);
-            gamesGrid.innerHTML = `<div class="loading" style="color: #dc3545;">${message}</div>`;
-        }
+        // PC용 게임 목록 (desktop + all)
+        let desktopGames = [...desktopOnlyGames, ...allGames];
+
+        // 모바일용 게임 목록 (mobile + all)
+        let mobileGames = [...mobileOnlyGames, ...allGames];
 
         // 화면 방향과 크기 확인
         function checkScreenOrientation() {
@@ -181,38 +164,38 @@
         }
 
         // 게임 카드 생성 (데스크탑)
-        function createGameCard(filename) {
-            const gameId = filename.replace('.html', '');
+        function createGameCard(game) {
+            const gameId = game.name.replace('.html', '');
             const card = document.createElement('div');
             card.className = 'game-card';
-            card.onclick = () => navigateToGame(filename, 'desktop');
+            card.onclick = () => navigateToGame(game.name, game.folder);
             
             card.innerHTML = `
-                <div class="game-title">게임 ${gameId}</div>
-                <div class="game-id">ID: ${gameId}</div>
+                <div class="game-title">${gameId}</div>
+                <div class="game-id">${game.folder}</div>
             `;
             
             return card;
         }
 
         // 모바일 게임 카드 생성
-        function createMobileGameCard(filename) {
-            const gameId = filename.replace('.html', '');
+        function createMobileGameCard(game) {
+            const gameId = game.name.replace('.html', '');
             const card = document.createElement('div');
             card.className = 'game-card';
-            card.onclick = () => navigateToGame(filename, 'mobile');
+            card.onclick = () => navigateToGame(game.name, game.folder);
             
             card.innerHTML = `
-                <div class="game-title">모바일 게임 ${gameId}</div>
-                <div class="game-id">ID: ${gameId}</div>
+                <div class="game-title">${gameId}</div>
+                <div class="game-id">${game.folder}</div>
             `;
             
             return card;
         }
 
         // 게임으로 이동
-        function navigateToGame(filename, type) {
-            window.location.href = `/${type}/${filename}`;
+        function navigateToGame(filename, folder) {
+            window.location.href = `games/${folder}/${filename}`;
         }
 
         // 데스크탑 게임 목록 렌더링
@@ -221,14 +204,14 @@
             
             if (checkScreenOrientation()) {
                 if (desktopGames.length === 0) {
-                    gamesGrid.innerHTML = '<div class="loading">게임 목록을 불러오는 중...</div>';
+                    gamesGrid.innerHTML = '<div class="loading">게임이 없습니다.</div>';
                     return;
                 }
                 
                 gamesGrid.innerHTML = '';
                 
-                desktopGames.forEach(filename => {
-                    const card = createGameCard(filename);
+                desktopGames.forEach(game => {
+                    const card = createGameCard(game);
                     gamesGrid.appendChild(card);
                 });
             }
@@ -245,16 +228,16 @@
             
             mobileGamesGrid.innerHTML = '';
             
-            mobileGames.forEach(filename => {
-                const card = createMobileGameCard(filename);
+            mobileGames.forEach(game => {
+                const card = createMobileGameCard(game);
                 mobileGamesGrid.appendChild(card);
             });
         }
 
         // 초기 렌더링
         document.addEventListener('DOMContentLoaded', () => {
-            fetchDesktopGames(); // 서버에서 데스크탑 게임 목록 가져오기
-            fetchMobileGames(); // 서버에서 모바일 게임 목록 가져오기
+            renderGames(); // 데스크탑 게임 목록 렌더링
+            renderMobileGames(); // 모바일 게임 목록 렌더링
         });
 
         // 화면 크기 변경 시 다시 확인

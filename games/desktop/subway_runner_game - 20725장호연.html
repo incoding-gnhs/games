@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서브웨이 러너 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: white;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 448px;
+            height: 100vh;
+            background: linear-gradient(to bottom, #f3f4f6, #e5e7eb);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+        }
+
+        .score-text {
+            color: #fbbf24;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .difficulty-text {
+            color: #e5e7eb;
+            font-size: 0.75rem;
+            text-align: center;
+            margin-top: 0.25rem;
+        }
+
+        .invincible-indicator {
+            position: absolute;
+            top: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background-color: rgba(168, 85, 247, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            animation: pulse 1s infinite;
+        }
+
+        .invincible-text {
+            color: white;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+
+        .lane-marker {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background-color: #9ca3af;
+            opacity: 0.3;
+        }
+
+        .player {
+            position: absolute;
+            bottom: 15%;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: left 0.2s ease-out;
+        }
+
+        .player.normal {
+            background: linear-gradient(to bottom right, #fbbf24, #f97316);
+        }
+
+        .player.invincible {
+            background: linear-gradient(to bottom right, #c084fc, #ec4899);
+            animation: pulse 1s infinite;
+        }
+
+        .obstacle {
+            position: absolute;
+            transition: top 0.1s;
+        }
+
+        .obstacle-item {
+            width: 48px;
+            height: 48px;
+            background-color: #dc2626;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .coin {
+            width: 40px;
+            height: 40px;
+            background-color: #fbbf24;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            animation: pulse 1s infinite;
+        }
+
+        .invincible-item {
+            width: 48px;
+            height: 48px;
+            background-color: #a855f7;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: bounce 1s infinite;
+        }
+
+        .slowdown-item {
+            width: 48px;
+            height: 48px;
+            background-color: #60a5fa;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: spin 2s linear infinite;
+        }
+
+        .modal {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        .modal-content {
+            text-align: center;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+
+        .game-over-title {
+            font-size: 2.25rem;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+
+        .final-score {
+            font-size: 1.875rem;
+            color: #fbbf24;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            font-weight: bold;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-start {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background-color: #059669;
+        }
+
+        .btn-restart {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-restart:hover {
+            background-color: #2563eb;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #4b5563;
+            font-size: 0.875rem;
+            opacity: 0.7;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Score Display -->
+        <div class="score-display">
+            <div class="score-text" id="scoreText">0</div>
+            <div class="difficulty-text hidden" id="difficultyText"></div>
+        </div>
+
+        <!-- Invincibility Indicator -->
+        <div class="invincible-indicator hidden" id="invincibleIndicator">
+            <div class="invincible-text">⭐ 무적 상태 ⭐</div>
+        </div>
+
+        <!-- Game Area -->
+        <div id="gameArea" style="position: relative; width: 100%; height: 100%;">
+            <!-- Lane Markers -->
+            <div class="lane-marker" style="left: 25%;"></div>
+            <div class="lane-marker" style="left: 41.67%;"></div>
+            <div class="lane-marker" style="left: 58.33%;"></div>
+            <div class="lane-marker" style="left: 75%;"></div>
+
+            <!-- Player -->
+            <div id="player" class="player normal">🏃</div>
+
+            <!-- Obstacles Container -->
+            <div id="obstaclesContainer"></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div class="modal" id="startModal">
+            <div class="modal-content">
+                <h1 class="title">🏃 러너</h1>
+                <p class="subtitle">좌우 스와이프로 이동</p>
+                <button class="btn btn-start" onclick="startGame()">시작하기</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="modal hidden" id="gameOverModal">
+            <div class="modal-content">
+                <h2 class="game-over-title">게임 오버!</h2>
+                <p class="final-score" id="finalScore">점수: 0</p>
+                <button class="btn btn-restart" onclick="startGame()">다시 시작</button>
+            </div>
+        </div>
+
+        <!-- Controls Hint -->
+        <div class="controls-hint hidden" id="controlsHint">
+            PC: ← → 방향키 | 모바일: 좌우 스와이프
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = 'ready'; // ready, playing, gameOver
+        let score = 0;
+        let playerLane = 1; // 0: left, 1: middle, 2: right
+        let obstacles = [];
+        let isInvincible = false;
+        let difficulty = 1;
+        let difficultyReduction = 0;
+        let gameLoopInterval = null;
+        let obstacleId = 0;
+        let lastSpawnTime = 0;
+        let touchStart = null;
+
+        // Constants
+        const LANES = [30, 50, 70]; // percentage positions
+        const BASE_GAME_SPEED = 50; // ms per frame
+        const BASE_OBSTACLE_SPEED = 2.0;
+        const BASE_SPAWN_RATE = 0.05;
+
+        // DOM Elements
+        const player = document.getElementById('player');
+        const obstaclesContainer = document.getElementById('obstaclesContainer');
+        const scoreText = document.getElementById('scoreText');
+        const difficultyText = document.getElementById('difficultyText');
+        const invincibleIndicator = document.getElementById('invincibleIndicator');
+        const startModal = document.getElementById('startModal');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const finalScore = document.getElementById('finalScore');
+        const controlsHint = document.getElementById('controlsHint');
+        const gameContainer = document.getElementById('gameContainer');
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            playerLane = 1;
+            obstacles = [];
+            isInvincible = false;
+            difficulty = 1;
+            difficultyReduction = 0;
+            lastSpawnTime = 0;
+            obstacleId = 0;
+
+            scoreText.textContent = '0';
+            difficultyText.classList.add('hidden');
+            invincibleIndicator.classList.add('hidden');
+            startModal.classList.add('hidden');
+            gameOverModal.classList.add('hidden');
+            controlsHint.classList.remove('hidden');
+            player.className = 'player normal';
+            updatePlayerPosition();
+
+            obstaclesContainer.innerHTML = '';
+
+            runGameLoop();
+        }
+
+        function runGameLoop() {
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+            }
+
+            const baseDifficulty = 1 + Math.floor(score / 500) * 0.2;
+            difficulty = Math.max(1, baseDifficulty - difficultyReduction);
+            
+            const gameSpeed = BASE_GAME_SPEED / difficulty;
+            const obstacleSpeed = BASE_OBSTACLE_SPEED * difficulty;
+            const spawnRate = BASE_SPAWN_RATE * difficulty;
+            const minSpawnInterval = 600;
+
+            // Update difficulty display
+            if (difficulty > 1) {
+                difficultyText.textContent = `난이도 x${difficulty.toFixed(1)}`;
+                difficultyText.classList.remove('hidden');
+            } else {
+                difficultyText.classList.add('hidden');
+            }
+
+            gameLoopInterval = setInterval(() => {
+                if (gameState !== 'playing') {
+                    clearInterval(gameLoopInterval);
+                    return;
+                }
+
+                // Move obstacles down
+                obstacles = obstacles.map(obs => ({
+                    ...obs,
+                    y: obs.y + obstacleSpeed
+                })).filter(obs => obs.y < 100);
+
+                updateObstacles();
+
+                // Spawn new obstacles
+                const currentTime = Date.now();
+                const timeSinceLastSpawn = currentTime - lastSpawnTime;
+
+                if (Math.random() < spawnRate && timeSinceLastSpawn >= minSpawnInterval) {
+                    lastSpawnTime = currentTime;
+
+                    const numObstacles = Math.random() > 0.6 ? 2 : 1;
+                    const availableLanes = [0, 1, 2];
+                    const maxObstacles = Math.min(numObstacles, 2);
+
+                    for (let i = 0; i < maxObstacles; i++) {
+                        if (availableLanes.length > 1) {
+                            const laneIndex = Math.floor(Math.random() * availableLanes.length);
+                            const lane = availableLanes.splice(laneIndex, 1)[0];
+
+                            let type;
+                            const rand = Math.random();
+                            if (rand > 0.98) {
+                                type = 'slowdown';
+                            } else if (rand > 0.93) {
+                                type = 'invincible';
+                            } else if (rand > 0.73) {
+                                type = 'coin';
+                            } else {
+                                type = 'obstacle';
+                            }
+
+                            obstacles.push({
+                                id: obstacleId++,
+                                lane,
+                                y: -10,
+                                type,
+                                element: createObstacleElement(type)
+                            });
+                        }
+                    }
+
+                    updateObstacles();
+                }
+
+                // Check collisions
+                checkCollisions();
+
+                // Increase score
+                score += 1;
+                scoreText.textContent = score;
+
+                // Update difficulty if needed
+                const newBaseDifficulty = 1 + Math.floor(score / 500) * 0.2;
+                const newDifficulty = Math.max(1, newBaseDifficulty - difficultyReduction);
+                if (Math.abs(newDifficulty - difficulty) > 0.01) {
+                    runGameLoop();
+                }
+            }, gameSpeed);
+        }
+
+        function createObstacleElement(type) {
+            const div = document.createElement('div');
+            div.className = 'obstacle';
+
+            let innerDiv;
+            switch(type) {
+                case 'obstacle':
+                    innerDiv = document.createElement('div');
+                    innerDiv.className = 'obstacle-item';
+                    innerDiv.textContent = '🚧';
+                    break;
+                case 'coin':
+                    innerDiv = document.createElement('div');
+                    innerDiv.className = 'coin';
+                    innerDiv.textContent = '💰';
+                    break;
+                case 'invincible':
+                    innerDiv = document.createElement('div');
+                    innerDiv.className = 'invincible-item';
+                    innerDiv.textContent = '⭐';
+                    break;
+                case 'slowdown':
+                    innerDiv = document.createElement('div');
+                    innerDiv.className = 'slowdown-item';
+                    innerDiv.textContent = '❄️';
+                    break;
+            }
+
+            div.appendChild(innerDiv);
+            obstaclesContainer.appendChild(div);
+            return div;
+        }
+
+        function updateObstacles() {
+            obstacles.forEach(obs => {
+                obs.element.style.left = `${LANES[obs.lane]}%`;
+                obs.element.style.top = `${obs.y}%`;
+                obs.element.style.transform = 'translateX(-50%)';
+            });
+
+            // Remove obstacles that are off screen
+            const toRemove = [];
+            obstacles.forEach(obs => {
+                if (obs.y >= 100) {
+                    obs.element.remove();
+                    toRemove.push(obs.id);
+                }
+            });
+            obstacles = obstacles.filter(obs => !toRemove.includes(obs.id));
+        }
+
+        function checkCollisions() {
+            obstacles.forEach(obs => {
+                if (obs.lane === playerLane && obs.y > 73 && obs.y < 87) {
+                    if (obs.type === 'obstacle') {
+                        if (!isInvincible) {
+                            gameOver();
+                        }
+                    } else if (obs.type === 'coin') {
+                        score += 50;
+                        scoreText.textContent = score;
+                        obs.element.remove();
+                        obstacles = obstacles.filter(o => o.id !== obs.id);
+                    } else if (obs.type === 'invincible') {
+                        activateInvincibility();
+                        obs.element.remove();
+                        obstacles = obstacles.filter(o => o.id !== obs.id);
+                    } else if (obs.type === 'slowdown') {
+                        difficultyReduction += 0.1;
+                        obs.element.remove();
+                        obstacles = obstacles.filter(o => o.id !== obs.id);
+                    }
+                }
+            });
+        }
+
+        function activateInvincibility() {
+            isInvincible = true;
+            player.className = 'player invincible';
+            invincibleIndicator.classList.remove('hidden');
+
+            setTimeout(() => {
+                isInvincible = false;
+                player.className = 'player normal';
+                invincibleIndicator.classList.add('hidden');
+            }, 5000);
+        }
+
+        function gameOver() {
+            gameState = 'gameOver';
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+            }
+            finalScore.textContent = `점수: ${score}`;
+            gameOverModal.classList.remove('hidden');
+            controlsHint.classList.add('hidden');
+        }
+
+        function updatePlayerPosition() {
+            player.style.left = `${LANES[playerLane]}%`;
+            player.style.transform = 'translateX(-50%)';
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+
+            if (e.key === 'ArrowLeft' && playerLane > 0) {
+                playerLane--;
+                updatePlayerPosition();
+            } else if (e.key === 'ArrowRight' && playerLane < 2) {
+                playerLane++;
+                updatePlayerPosition();
+            }
+        });
+
+        // Touch Controls
+        gameContainer.addEventListener('touchstart', (e) => {
+            touchStart = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        });
+
+        gameContainer.addEventListener('touchend', (e) => {
+            if (!touchStart || gameState !== 'playing') return;
+
+            const touchEnd = {
+                x: e.changedTouches[0].clientX,
+                y: e.changedTouches[0].clientY
+            };
+
+            const deltaX = touchEnd.x - touchStart.x;
+
+            if (Math.abs(deltaX) > 50) {
+                if (deltaX > 0 && playerLane < 2) {
+                    playerLane++;
+                    updatePlayerPosition();
+                } else if (deltaX < 0 && playerLane > 0) {
+                    playerLane--;
+                    updatePlayerPosition();
+                }
+            }
+
+            touchStart = null;
+        });
+    </script>
+</body>
+</html>
