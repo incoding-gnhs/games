@@ -223,6 +223,9 @@
         });
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             document.getElementById('startScreen').style.display = 'none';
             gameStarted = true;
             gameRunning = true;
@@ -416,8 +419,9 @@
 
         function gameOver() {
             gameRunning = false;
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('gameOver').classList.add('show');
+            
+            // 결과 페이지로 이동
+            goToResultPage('우주 슈팅', score, 'desktop');
         }
 
         function gameLoop() {
@@ -443,5 +447,6 @@
             requestAnimationFrame(gameLoop);
         }
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

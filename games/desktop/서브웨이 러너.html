@@ -346,6 +346,9 @@
         const gameContainer = document.getElementById('gameContainer');
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             gameState = 'playing';
             score = 0;
             playerLane = 1;
@@ -555,9 +558,9 @@
             if (gameLoopInterval) {
                 clearInterval(gameLoopInterval);
             }
-            finalScore.textContent = `점수: ${score}`;
-            gameOverModal.classList.remove('hidden');
-            controlsHint.classList.add('hidden');
+            
+            // 결과 페이지로 이동
+            goToResultPage('서브웨이 러너', score, 'desktop');
         }
 
         function updatePlayerPosition() {
@@ -609,5 +612,6 @@
             touchStart = null;
         });
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

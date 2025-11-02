@@ -308,6 +308,9 @@
         }
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             gameReady = true;
             gameState = 'ready';
             
@@ -365,22 +368,9 @@
             clearInterval(gameLoop);
             
             const totalScore = leftScore + rightScore;
-            showOverlay(
-                `<div class="game-over-title">게임 오버!</div>
-                <div class="final-score">최종 점수: ${totalScore}</div>
-                <div class="sub-info">왼쪽: ${leftScore} | 오른쪽: ${rightScore}</div>`,
-                '다시 시작',
-                () => {
-                    gameState = 'ready';
-                    gameReady = false;
-                    document.getElementById('actionButton').style.display = 'block';
-                    showOverlay(
-                        '<div class="info-text">두 개의 스네이크를 동시에 조작하세요!</div><div class="sub-info">왼쪽: WASD | 오른쪽: 화살표 키</div><div class="warning">한 쪽이라도 부딪히면 게임 오버!</div>',
-                        '게임 준비',
-                        startGame
-                    );
-                }
-            );
+            
+            // 결과 페이지로 이동
+            goToResultPage('듀얼 스네이크 게임', totalScore, 'etc');
         }
 
         document.addEventListener('keydown', (e) => {
@@ -424,5 +414,6 @@
         renderGrid('leftGrid', initSnake(), leftFood);
         renderGrid('rightGrid', initSnake(), rightFood);
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

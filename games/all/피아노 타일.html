@@ -366,6 +366,9 @@
         }
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             document.getElementById('instructions').style.display = 'none';
             gameState.isRunning = true;
             gameState.score = 0;
@@ -634,10 +637,8 @@
                 clearInterval(gameState.level10Timer);
             }
             
-            document.getElementById('finalScore').textContent = gameState.score;
-            document.getElementById('finalLevel').textContent = gameState.level;
-            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
-            document.getElementById('gameOver').style.display = 'flex';
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
         }
 
         function victoryComplete() {
@@ -648,12 +649,8 @@
                 clearInterval(gameState.level10Timer);
             }
             
-            document.getElementById('finalScore').textContent = gameState.score;
-            document.getElementById('finalLevel').textContent = gameState.level;
-            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
-            document.getElementById('gameOver').querySelector('h2').textContent = '🎉 축하합니다! 🎉';
-            document.getElementById('gameOver').querySelector('h2').style.color = '#4CAF50';
-            document.getElementById('gameOver').style.display = 'flex';
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
         }
 
         function gameComplete() {
@@ -664,12 +661,8 @@
                 clearInterval(gameState.level10Timer);
             }
             
-            document.getElementById('finalScore').textContent = gameState.score;
-            document.getElementById('finalLevel').textContent = gameState.level;
-            document.getElementById('totalTiles').textContent = gameState.tilesCleared;
-            document.getElementById('gameOver').querySelector('h2').textContent = '게임 완료!';
-            document.getElementById('gameOver').querySelector('h2').style.color = '#333';
-            document.getElementById('gameOver').style.display = 'flex';
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
         }
 
         function restartGame() {
@@ -736,5 +729,6 @@
         // 초기 화면 표시
         updateDisplay();
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

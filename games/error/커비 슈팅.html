@@ -455,6 +455,9 @@
         }
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             document.getElementById('menu').style.display = 'none';
             document.getElementById('characterSelect').style.display = 'flex';
         }
@@ -1044,31 +1047,14 @@
         function endGame(won) {
             gameState = 'gameOver';
             
-            let resultsHTML = '<div>';
-            resultsHTML += `<div><strong>최종 점수: ${score}점</strong></div>`;
-            resultsHTML += `<div style="margin-top: 20px;">━━━━━━━━━━━━━━━━</div>`;
-            resultsHTML += `<div style="margin-top: 10px;">스테이지 1 격파: ${stageResults.stage1Enemies}마리 (${stageResults.stage1Enemies * 10}점)</div>`;
-            resultsHTML += `<div>스테이지 2 격파: ${stageResults.stage2Enemies}마리 (${stageResults.stage2Enemies * 10}점)</div>`;
-            
-            if (stage >= 3) {
-                if (stageResults.stage3Boss) {
-                    resultsHTML += `<div>보스 격파 성공! (+100점)</div>`;
-                } else {
-                    resultsHTML += `<div>보스 격파 실패 (+50점)</div>`;
-                    score += 50;
-                }
+            // 최종 점수 계산
+            let finalScore = score;
+            if (stage >= 3 && !stageResults.stage3Boss) {
+                finalScore += 50; // 보스 격파 실패 보너스
             }
             
-            resultsHTML += `<div style="margin-top: 20px;">━━━━━━━━━━━━━━━━</div>`;
-            resultsHTML += `<div style="margin-top: 10px; font-size: 24px; color: #ffeb3b;">총점: ${score}점</div>`;
-            resultsHTML += '</div>';
-            
-            document.getElementById('results').innerHTML = resultsHTML;
-            document.getElementById('gameOver').style.display = 'flex';
-            document.getElementById('timerDisplay').classList.add('hidden');
-            document.getElementById('bossHpDisplay').classList.add('hidden');
-            
-            updateHUD();
+            // 결과 페이지로 이동
+            goToResultPage('커비 슈팅', finalScore, 'error');
         }
 
         function drawGame() {
@@ -1212,6 +1198,6 @@
             }
         }
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>
-                        

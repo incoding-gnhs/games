@@ -424,6 +424,9 @@
         }
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             // Reset game state
             game.player = { x: 200, y: 300, size: 12, hp: 100, maxHp: 100, speed: 4 };
             game.boss = { x: 200, y: 100, size: 30, hp: 1000, maxHp: 1000, speed: 4.5, direction: 1, movePattern: 0, patternTimer: 0 };
@@ -766,16 +769,14 @@
             // Check win/lose
             if (game.boss.hp <= 0) {
                 gameState = 'win';
-                document.getElementById('finalScoreWin').textContent = score;
-                document.getElementById('gameScreen').style.display = 'none';
-                document.getElementById('winScreen').style.display = 'block';
+                // 승리 시 결과 페이지로 이동
+                goToResultPage('슈팅 게임', score, 'desktop');
                 return;
             }
             if (game.player.hp <= 0) {
                 gameState = 'gameover';
-                document.getElementById('finalScoreGameover').textContent = score;
-                document.getElementById('gameScreen').style.display = 'none';
-                document.getElementById('gameoverScreen').style.display = 'block';
+                // 패배 시 결과 페이지로 이동
+                goToResultPage('슈팅 게임', score, 'desktop');
                 return;
             }
 
@@ -874,5 +875,6 @@
         }
         updateInstructions();
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

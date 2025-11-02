@@ -69,6 +69,9 @@
 
   // 직업 선택
   function selectJob(jobName) {
+    // 로그인 체크
+    if (!checkLoginOrRedirect()) return;
+    
     const playerData = {
       job: jobName,
       ...JOBS[jobName],
@@ -274,7 +277,11 @@
     } else {
       addLog(`플레이어가 패배했습니다... 😢`);
       addLog(`이번 전적: ${winStreak}연승 후 패배`);
+      
+      // 패배 시 결과 페이지로 이동 (연승 횟수를 점수로 사용)
+      goToResultPage('턴제 배틀', winStreak, 'all');
       winStreak = 0;
+      return;
     }
     
     updateBattleUI();
@@ -353,5 +360,5 @@
   renderJobSelect();
 </script>
 
-
+<script src="/game-utils.js"></script>
  </body> </html>

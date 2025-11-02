@@ -204,6 +204,9 @@
         }
 
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             if (gameRunning) {
                 clearInterval(gameLoop);
             }
@@ -285,8 +288,9 @@
         function endGame() {
             gameRunning = false;
             clearInterval(gameLoop);
-            finalScoreEl.textContent = score;
-            gameOverEl.classList.add('show');
+            
+            // 결과 페이지로 이동
+            goToResultPage('스네이크', score, 'mobile');
         }
 
         function changeDirection(dir) {
@@ -328,5 +332,6 @@
         initGame();
         draw();
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

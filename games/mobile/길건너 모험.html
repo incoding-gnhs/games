@@ -292,6 +292,9 @@
             lastSpawnTime: {},
             
             init() {
+                // 로그인 체크
+                if (!checkLoginOrRedirect()) return;
+                
                 this.gridWidth = Math.floor(this.world.offsetWidth / this.cellSize);
                 this.gridHeight = Math.floor(this.world.offsetHeight / this.cellSize);
                 
@@ -568,10 +571,8 @@
                 this.isGameOver = true;
                 this.isRunning = false;
                 
-                document.getElementById('finalScore').textContent = this.score;
-                document.getElementById('finalDistance').textContent = this.distance;
-                
-                this.modal.style.display = 'flex';
+                // 결과 페이지로 이동
+                goToResultPage('길건너 모험', this.score, 'mobile');
             },
             
             updateUI() {
@@ -654,5 +655,6 @@
             setTimeout(() => game.init(), 100);
         });
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

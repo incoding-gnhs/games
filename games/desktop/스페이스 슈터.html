@@ -295,6 +295,9 @@
         }
         
         function startGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             gameState = 'playing';
             score = 0;
             combo = 0;
@@ -324,30 +327,16 @@
         }
         
         function endGame() {
+        function endGame() {
             gameState = 'gameover';
-            
-            document.getElementById('gamePlay').classList.add('hidden');
-            document.getElementById('gameOver').classList.remove('hidden');
-            
-            document.getElementById('finalScoreText').textContent = score.toLocaleString();
-            var mins = Math.floor(timeElapsed / 60);
-            var secs = timeElapsed % 60;
-            var secStr = secs < 10 ? '0' + secs : secs;
-            document.getElementById('finalTimeText').textContent = mins + ':' + secStr;
-            document.getElementById('finalComboText').textContent = maxCombo;
-            
-            if (score > highScore) {
-                highScore = score;
-                document.getElementById('highScoreText').textContent = highScore.toLocaleString();
-                document.getElementById('highScoreDisplay').classList.remove('hidden');
-                document.getElementById('newRecord').classList.remove('hidden');
-            } else {
-                document.getElementById('newRecord').classList.add('hidden');
-            }
             
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
+            
+            // 결과 페이지로 이동
+            goToResultPage('스페이스 슈터', score, 'desktop');
+        }
         }
         
         function gameLoop() {
@@ -527,5 +516,6 @@
             ctx.fillRect(player.x + 5, player.y + 5, 30, 30);
         }
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>

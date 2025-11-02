@@ -168,6 +168,9 @@
 
         // 게임 초기화
         function initGame() {
+            // 로그인 체크
+            if (!checkLoginOrRedirect()) return;
+            
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
             
@@ -707,10 +710,16 @@
         // 게임 종료
         function endGame(playerWon = true) {
             gameState.gamePhase = 'ended';
+            
+            // 패배 시 결과 페이지로 이동 (연승 횟수를 점수로 사용)
+            if (!playerWon) {
+                goToResultPage('1vs1 슈팅', gameState.winStreak, 'desktop');
+                return;
+            }
+            
+            // 승리 시에는 계속 게임 진행
             if (playerWon) {
                 document.getElementById('gameResult').textContent = `축하합니다! 최종 연승: ${gameState.winStreak}`;
-            } else {
-                document.getElementById('gameResult').textContent = `게임 오버! 연승 기록: ${gameState.winStreak}`;
             }
             document.getElementById('gameOver').style.display = 'block';
         }
@@ -887,5 +896,6 @@
             setTimeout(startRound, 1000);
         });
     </script>
+    <script src="/game-utils.js"></script>
 </body>
 </html>
