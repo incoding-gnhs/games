@@ -5,6 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import User from './models/user.js';
+import Score from './models/score.js';
 
 // ES6 모듈에서 __dirname 사용을 위한 설정
 const __filename = fileURLToPath(import.meta.url);
@@ -13,11 +15,11 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 80;
 
+// JSON 파싱 미들웨어
+app.use(express.json());
+
 // MongoDB 연결
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/games', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('MongoDB 연결 성공'))
 .catch(err => console.error('MongoDB 연결 실패:', err));
 
@@ -35,6 +37,415 @@ mongoose.connection.on('disconnected', () => {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/games', express.static(path.join(__dirname, 'games')));
+
+// ==================== API 엔드포인트 ====================
+
+// 학생 생성 또는 조회
+app.post('/api/students', async (req, res) => {
+  try {
+    const { name, studentId } = req.body;
+    
+    if (!name || !studentId) {
+      return res.status(400).json({ error: '이름과 학번을 입력해주세요.' });
+    }
+
+    // 이미 존재하는 학생인지 확인
+    let user = await User.findOne({ studentId });
+    
+    if (user) {
+      return res.json({ message: '이미 존재하는 학생입니다.', user });
+    }
+
+    // 새 학생 생성
+    user = new User({ name, studentId });
+    await user.save();
+    
+    res.status(201).json({ message: '학생이 생성되었습니다.', user });
+  } catch (error) {
+    console.error('학생 생성 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 학생 ID로 보상 추가
+app.post('/api/students/:studentId/rewards', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { title, description } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: '보상 제목을 입력해주세요.' });
+    }
+
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
+    }
+
+    const newReward = {
+      title,
+      description: description || '',
+      earnedAt: new Date(),
+      claimed: false
+    };
+
+    user.rewards.push(newReward);
+    await user.save();
+
+    res.status(201).json({ 
+      message: '보상이 추가되었습니다.', 
+      reward: user.rewards[user.rewards.length - 1] 
+    });
+  } catch (error) {
+    console.error('보상 추가 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 학생 ID로 보상 목록 조회
+app.get('/api/students/:studentId/rewards', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
+    }
+
+    res.json({ 
+      studentId: user.studentId,
+      name: user.name,
+      rewards: user.rewards 
+    });
+  } catch (error) {
+    console.error('보상 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 보상 수령 처리
+app.put('/api/students/:studentId/rewards/:rewardId/claim', async (req, res) => {
+  try {
+    const { studentId, rewardId } = req.params;
+
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
+    }
+
+    const reward = user.rewards.id(rewardId);
+    
+    if (!reward) {
+      return res.status(404).json({ error: '해당 보상을 찾을 수 없습니다.' });
+    }
+
+    if (reward.claimed) {
+      return res.status(400).json({ error: '이미 수령한 보상입니다.' });
+    }
+
+    reward.claimed = true;
+    reward.claimedAt = new Date();
+    await user.save();
+
+    res.json({ 
+      message: '보상을 수령했습니다.', 
+      reward 
+    });
+  } catch (error) {
+    console.error('보상 수령 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 미수령 보상 조회
+app.get('/api/students/:studentId/rewards/unclaimed', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
+    }
+
+    const unclaimedRewards = user.rewards.filter(reward => !reward.claimed);
+
+    res.json({ 
+      studentId: user.studentId,
+      name: user.name,
+      unclaimedRewards 
+    });
+  } catch (error) {
+    console.error('미수령 보상 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// ==================== 게임 랭킹 시스템 API ====================
+
+// 게임 점수 기록
+app.post('/api/games/:gameName/scores', async (req, res) => {
+  try {
+    const { gameName } = req.params;
+    const { studentId, score, playTime } = req.body;
+
+    if (!studentId || score === undefined) {
+      return res.status(400).json({ error: '학번과 점수는 필수입니다.' });
+    }
+
+    const newScore = new Score({
+      studentId,
+      gameName,
+      score,
+      playTime: playTime || 0
+    });
+
+    await newScore.save();
+
+    res.status(201).json({ 
+      message: '점수가 기록되었습니다.', 
+      score: newScore 
+    });
+  } catch (error) {
+    console.error('점수 기록 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 특정 게임의 전체 랭킹 조회 (점수 높은 순) - 각 학생의 최고 점수만
+app.get('/api/games/:gameName/rankings', async (req, res) => {
+  try {
+    const { gameName } = req.params;
+    const limit = parseInt(req.query.limit) || 100; // 기본 100개
+    const skip = parseInt(req.query.skip) || 0;
+
+    // MongoDB aggregation을 사용하여 각 학생의 최고 점수만 추출
+    const rankings = await Score.aggregate([
+      { $match: { gameName } },
+      { $sort: { score: -1, createdAt: 1 } },
+      {
+        $group: {
+          _id: '$studentId',
+          studentId: { $first: '$studentId' },
+          score: { $first: '$score' },
+          playTime: { $first: '$playTime' },
+          createdAt: { $first: '$createdAt' }
+        }
+      },
+      { $sort: { score: -1, createdAt: 1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          studentId: 1,
+          score: 1,
+          playTime: 1,
+          createdAt: 1
+        }
+      }
+    ]);
+
+    // 전체 학생 수 계산
+    const totalStudents = await Score.aggregate([
+      { $match: { gameName } },
+      { $group: { _id: '$studentId' } },
+      { $count: 'total' }
+    ]);
+
+    const total = totalStudents.length > 0 ? totalStudents[0].total : 0;
+
+    res.json({ 
+      gameName,
+      total,
+      limit,
+      skip,
+      rankings 
+    });
+  } catch (error) {
+    console.error('랭킹 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 특정 게임의 TOP N 랭킹 조회 - 각 학생의 최고 점수만
+app.get('/api/games/:gameName/top/:topN', async (req, res) => {
+  try {
+    const { gameName, topN } = req.params;
+    const limit = parseInt(topN) || 10;
+
+    // MongoDB aggregation을 사용하여 각 학생의 최고 점수만 추출
+    const rankings = await Score.aggregate([
+      { $match: { gameName } },
+      { $sort: { score: -1, createdAt: 1 } },
+      {
+        $group: {
+          _id: '$studentId',
+          studentId: { $first: '$studentId' },
+          score: { $first: '$score' },
+          playTime: { $first: '$playTime' },
+          createdAt: { $first: '$createdAt' }
+        }
+      },
+      { $sort: { score: -1, createdAt: 1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          studentId: 1,
+          score: 1,
+          playTime: 1,
+          createdAt: 1
+        }
+      }
+    ]);
+
+    res.json({ 
+      gameName,
+      topN: limit,
+      rankings 
+    });
+  } catch (error) {
+    console.error('TOP 랭킹 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 특정 학생의 특정 게임 기록 조회
+app.get('/api/games/:gameName/students/:studentId', async (req, res) => {
+  try {
+    const { gameName, studentId } = req.params;
+
+    const scores = await Score.find({ gameName, studentId })
+      .sort({ score: -1, createdAt: -1 })
+      .select('score playTime createdAt');
+
+    if (scores.length === 0) {
+      return res.status(404).json({ error: '해당 학생의 게임 기록이 없습니다.' });
+    }
+
+    // 최고 점수
+    const bestScore = scores[0];
+    
+    // 평균 점수
+    const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
+
+    res.json({ 
+      gameName,
+      studentId,
+      totalPlays: scores.length,
+      bestScore: bestScore.score,
+      averageScore: Math.round(avgScore),
+      scores 
+    });
+  } catch (error) {
+    console.error('학생 게임 기록 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 특정 학생의 특정 게임 최고 점수 조회
+app.get('/api/games/:gameName/students/:studentId/best', async (req, res) => {
+  try {
+    const { gameName, studentId } = req.params;
+
+    const bestScore = await Score.findOne({ gameName, studentId })
+      .sort({ score: -1 })
+      .select('score playTime createdAt');
+
+    if (!bestScore) {
+      return res.status(404).json({ error: '해당 학생의 게임 기록이 없습니다.' });
+    }
+
+    // 전체 랭킹에서 순위 계산
+    const rank = await Score.countDocuments({ 
+      gameName, 
+      score: { $gt: bestScore.score } 
+    }) + 1;
+
+    res.json({ 
+      gameName,
+      studentId,
+      rank,
+      bestScore 
+    });
+  } catch (error) {
+    console.error('최고 점수 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 학생의 모든 게임 기록 조회
+app.get('/api/students/:studentId/games', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const allScores = await Score.find({ studentId })
+      .sort({ createdAt: -1 });
+
+    if (allScores.length === 0) {
+      return res.status(404).json({ error: '해당 학생의 게임 기록이 없습니다.' });
+    }
+
+    // 게임별로 그룹화하여 최고 점수만 추출
+    const gameStats = {};
+    allScores.forEach(score => {
+      if (!gameStats[score.gameName] || gameStats[score.gameName].score < score.score) {
+        gameStats[score.gameName] = {
+          gameName: score.gameName,
+          bestScore: score.score,
+          playTime: score.playTime,
+          achievedAt: score.createdAt
+        };
+      }
+    });
+
+    res.json({ 
+      studentId,
+      totalGamesPlayed: Object.keys(gameStats).length,
+      totalPlays: allScores.length,
+      gameStats: Object.values(gameStats)
+    });
+  } catch (error) {
+    console.error('학생 전체 게임 기록 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 전체 게임 목록 조회 (기록이 있는 게임들)
+app.get('/api/games', async (req, res) => {
+  try {
+    const games = await Score.distinct('gameName');
+    
+    const gameStats = await Promise.all(
+      games.map(async (gameName) => {
+        const count = await Score.countDocuments({ gameName });
+        const topScore = await Score.findOne({ gameName }).sort({ score: -1 });
+        
+        return {
+          gameName,
+          totalPlays: count,
+          topScore: topScore ? topScore.score : 0,
+          topPlayer: topScore ? topScore.studentId : null
+        };
+      })
+    );
+
+    res.json({ 
+      totalGames: games.length,
+      games: gameStats 
+    });
+  } catch (error) {
+    console.error('게임 목록 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// ==================== 페이지 라우트 ====================
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, `index.html`), (err) => {
