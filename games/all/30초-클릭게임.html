@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30초 클릭 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .info-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+
+        .info-box {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .info-value.time {
+            color: #667eea;
+        }
+
+        .info-value.score {
+            color: #f5576c;
+        }
+
+        .click-button {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            margin: 20px auto;
+            display: block;
+        }
+
+        .click-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .click-button:active {
+            transform: scale(0.95);
+        }
+
+        .click-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .start-button {
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .start-screen {
+            display: block;
+        }
+
+        .game-screen {
+            display: none;
+        }
+
+        .game-screen.active {
+            display: block;
+        }
+
+        .start-screen.hidden {
+            display: none;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            padding: 8px 0;
+            color: #666;
+        }
+
+        .instructions li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .click-button.pulsing {
+            animation: pulse 0.3s ease-in-out;
+        }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .click-button {
+                width: 250px;
+                height: 250px;
+                font-size: 2.5rem;
+            }
+
+            .info-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 시작 화면 -->
+        <div class="start-screen" id="startScreen">
+            <h1>🖱️ 30초 클릭 게임</h1>
+            <p class="subtitle">30초 동안 최대한 많이 클릭하세요!</p>
+            
+            <div class="instructions">
+                <h3>게임 방법</h3>
+                <ul>
+                    <li>시작 버튼을 누르면 게임이 시작됩니다</li>
+                    <li>30초 동안 버튼을 최대한 많이 클릭하세요</li>
+                    <li>시간이 끝나면 자동으로 결과가 표시됩니다</li>
+                    <li>클릭 수가 점수가 됩니다!</li>
+                </ul>
+            </div>
+
+            <button class="start-button" onclick="startGame()">게임 시작!</button>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div class="game-screen" id="gameScreen">
+            <h1>🖱️ 클릭하세요!</h1>
+            
+            <div class="info-section">
+                <div class="info-box">
+                    <div class="info-label">남은 시간</div>
+                    <div class="info-value time" id="timeLeft">30</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">클릭 수</div>
+                    <div class="info-value score" id="clickCount">0</div>
+                </div>
+            </div>
+
+            <button class="click-button" id="clickButton" onclick="handleClick()">
+                클릭!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let timeLeft = 30;
+        let clickCount = 0;
+        let gameTimer = null;
+        let isGameRunning = false;
+
+        // 로컬 스토리지에서 사용자 정보 가져오기
+        function getStoredUser() {
+            const userJson = localStorage.getItem('gameUser');
+            return userJson ? JSON.parse(userJson) : null;
+        }
+
+        // 게임 시작
+        function startGame() {
+            // 로그인 확인
+            const user = getStoredUser();
+            if (!user) {
+                alert('로그인이 필요합니다!');
+                window.location.href = '/';
+                return;
+            }
+
+            // 화면 전환
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('active');
+
+            // 게임 초기화
+            timeLeft = 30;
+            clickCount = 0;
+            isGameRunning = true;
+
+            updateDisplay();
+
+            // 타이머 시작
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 클릭 처리
+        function handleClick() {
+            if (!isGameRunning) return;
+
+            clickCount++;
+            updateDisplay();
+
+            // 클릭 애니메이션
+            const button = document.getElementById('clickButton');
+            button.classList.add('pulsing');
+            setTimeout(() => {
+                button.classList.remove('pulsing');
+            }, 300);
+        }
+
+        // 화면 업데이트
+        function updateDisplay() {
+            document.getElementById('timeLeft').textContent = timeLeft;
+            document.getElementById('clickCount').textContent = clickCount;
+        }
+
+        // 게임 종료
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(gameTimer);
+
+            // 버튼 비활성화
+            const button = document.getElementById('clickButton');
+            button.disabled = true;
+            button.textContent = '게임 종료!';
+
+            // 결과 페이지로 이동 (2초 후)
+            setTimeout(() => {
+                const gameName = '30초-클릭게임';
+                const score = clickCount;
+                const folder = 'all';
+
+                window.location.href = `/game-result?game=${encodeURIComponent(gameName)}&score=${score}&folder=${folder}`;
+            }, 2000);
+        }
+
+        // 스페이스바로도 클릭 가능
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && isGameRunning) {
+                e.preventDefault();
+                handleClick();
+            }
+        });
+    </script>
+</body>
+</html>

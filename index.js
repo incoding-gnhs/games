@@ -322,6 +322,95 @@ app.post('/api/games/:gameName/scores', async (req, res) => {
   }
 });
 
+// 게임 결과 페이지용 - 점수 저장 후 순위 정보 반환
+app.post('/api/games/:gameName/submit-score', async (req, res) => {
+  try {
+    const { gameName } = req.params;
+    const { studentId, score } = req.body;
+
+    if (!studentId || score === undefined) {
+      return res.status(400).json({ error: '학번과 점수는 필수입니다.' });
+    }
+
+    // 점수 저장
+    const newScore = new Score({
+      studentId,
+      gameName,
+      score
+    });
+    await newScore.save();
+
+    // 전체 랭킹 계산 (각 학생의 최고 점수 기준)
+    const allRankings = await Score.aggregate([
+      { $match: { gameName } },
+      { $sort: { score: -1, createdAt: 1 } },
+      {
+        $group: {
+          _id: '$studentId',
+          studentId: { $first: '$studentId' },
+          score: { $first: '$score' },
+          createdAt: { $first: '$createdAt' }
+        }
+      },
+      { $sort: { score: -1, createdAt: 1 } },
+      {
+        $project: {
+          _id: 0,
+          studentId: 1,
+          score: 1,
+          createdAt: 1
+        }
+      }
+    ]);
+
+    // 각 학생의 이름 조회
+    const studentIds = allRankings.map(r => r.studentId);
+    const users = await User.find({ studentId: { $in: studentIds } }).select('studentId name');
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.studentId] = user.name;
+    });
+
+    // 현재 학생의 최고 점수
+    const myBestScore = await Score.findOne({ gameName, studentId })
+      .sort({ score: -1 })
+      .select('score');
+
+    const myScore = myBestScore ? myBestScore.score : score;
+
+    // 내 순위 찾기
+    const myRank = allRankings.findIndex(r => r.studentId === studentId) + 1;
+    const totalPlayers = allRankings.length;
+    const percentile = totalPlayers > 0 ? ((totalPlayers - myRank + 1) / totalPlayers * 100).toFixed(1) : 100;
+
+    // 내 앞뒤 3명씩 (총 7명)
+    const myIndex = myRank - 1;
+    const startIndex = Math.max(0, myIndex - 3);
+    const endIndex = Math.min(allRankings.length, myIndex + 4);
+    const nearbyRankings = allRankings.slice(startIndex, endIndex).map((r, idx) => ({
+      rank: startIndex + idx + 1,
+      studentId: r.studentId,
+      name: userMap[r.studentId] || '알 수 없음',
+      score: r.score,
+      isMe: r.studentId === studentId
+    }));
+
+    res.json({
+      success: true,
+      currentScore: score,
+      myBestScore: myScore,
+      myRank,
+      totalPlayers,
+      percentile: parseFloat(percentile),
+      nearbyRankings
+    });
+
+  } catch (error) {
+    console.error('점수 제출 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
 // 특정 게임의 전체 랭킹 조회 (점수 높은 순) - 각 학생의 최고 점수만
 app.get('/api/games/:gameName/rankings', async (req, res) => {
   try {
