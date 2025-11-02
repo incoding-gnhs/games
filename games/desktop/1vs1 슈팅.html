@@ -204,6 +204,9 @@
             ];
             currentPlayer = players[0];
             
+            // 시작 자금 감소 (500원으로)
+            currentPlayer.money = 500;
+            
             bullets = [];
             soundEffects = [];
         }
@@ -237,11 +240,11 @@
             const speedBonus = Math.min((level - 1) * 0.2, 1.5);
             const fireRateBonus = Math.max(200 - (level - 1) * 15, 100);
             
-            // 레벨에 따라 무기 업그레이드
+            // 레벨에 따라 무기 업그레이드 (더 빨리 강한 무기 사용)
             let weapon = 'rifle';
-            if (level >= 8) weapon = 'star';
-            else if (level >= 6) weapon = 'cross';
-            else if (level >= 4) weapon = 'square';
+            if (level >= 5) weapon = 'star';
+            else if (level >= 4) weapon = 'cross';
+            else if (level >= 3) weapon = 'square';
             else if (level >= 2) weapon = 'diamond';
             
             return {
@@ -477,44 +480,125 @@
                     
                     let aiMoveX = 0, aiMoveY = 0;
                     
-                    if (dist > 200) {
-                        aiMoveX = (dx / dist) * aiPlayer.speed * 0.7;
-                        aiMoveY = (dy / dist) * aiPlayer.speed * 0.7;
-                    } else if (dist < 120) {
-                        aiMoveX = -(dx / dist) * aiPlayer.speed * 0.5;
-                        aiMoveY = -(dy / dist) * aiPlayer.speed * 0.5;
+                    // 적 총알 회피 (더 똑똑한 회피)
+                    let dodging = false;
+                    for (let bullet of bullets) {
+                        if (bullet.team === aiPlayer.team) continue;
+                        
+                        const bulletDx = bullet.x - aiPlayer.x;
+                        const bulletDy = bullet.y - aiPlayer.y;
+                        const bulletDist = Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy);
+                        
+                        // 총알이 가까우면 회피
+                        if (bulletDist < 120) {
+                            const bulletAngle = Math.atan2(bullet.vy, bullet.vx);
+                            const toAiAngle = Math.atan2(bulletDy, bulletDx);
+                            const angleDiff = Math.abs(bulletAngle - toAiAngle);
+                            
+                            // 총알이 AI를 향하고 있으면
+                            if (angleDiff < 0.5 || angleDiff > Math.PI * 2 - 0.5) {
+                                // 총알에 수직으로 회피
+                                const dodgeAngle = bulletAngle + Math.PI / 2;
+                                aiMoveX = Math.cos(dodgeAngle) * aiPlayer.speed * 1.2;
+                                aiMoveY = Math.sin(dodgeAngle) * aiPlayer.speed * 1.2;
+                                dodging = true;
+                                break;
+                            }
+                        }
                     }
                     
-                    // AI 벽 회피
+                    // 회피 중이 아니면 전략적 이동
+                    if (!dodging) {
+                        // 최적 사격 거리 유지 (150-250 거리)
+                        const optimalDist = 200;
+                        
+                        if (dist > optimalDist + 50) {
+                            // 플레이어에게 접근
+                            aiMoveX = (dx / dist) * aiPlayer.speed * 0.85;
+                            aiMoveY = (dy / dist) * aiPlayer.speed * 0.85;
+                        } else if (dist < optimalDist - 50) {
+                            // 플레이어에게서 후퇴
+                            aiMoveX = -(dx / dist) * aiPlayer.speed * 0.7;
+                            aiMoveY = -(dy / dist) * aiPlayer.speed * 0.7;
+                        } else {
+                            // 측면 이동 (strafe)
+                            const strafeAngle = Math.atan2(dy, dx) + Math.PI / 2;
+                            const strafeDirection = Math.sin(Date.now() / 500) > 0 ? 1 : -1;
+                            aiMoveX = Math.cos(strafeAngle) * aiPlayer.speed * 0.6 * strafeDirection;
+                            aiMoveY = Math.sin(strafeAngle) * aiPlayer.speed * 0.6 * strafeDirection;
+                        }
+                        
+                        // 벽 근처에서는 중앙으로 이동
+                        if (aiPlayer.x < 100 || aiPlayer.x > 1100 || aiPlayer.y < 100 || aiPlayer.y > 700) {
+                            const toCenterX = 600 - aiPlayer.x;
+                            const toCenterY = 400 - aiPlayer.y;
+                            const toCenterDist = Math.sqrt(toCenterX * toCenterX + toCenterY * toCenterY);
+                            aiMoveX += (toCenterX / toCenterDist) * aiPlayer.speed * 0.3;
+                            aiMoveY += (toCenterY / toCenterDist) * aiPlayer.speed * 0.3;
+                        }
+                    }
+                    
+                    // AI 벽 회피 (개선된 버전)
                     if (checkWallCollision(aiPlayer, aiPlayer.x + aiMoveX, aiPlayer.y + aiMoveY)) {
-                        if (!checkWallCollision(aiPlayer, aiPlayer.x + aiPlayer.speed, aiPlayer.y)) {
-                            aiMoveX = aiPlayer.speed; aiMoveY = 0;
-                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x - aiPlayer.speed, aiPlayer.y)) {
-                            aiMoveX = -aiPlayer.speed; aiMoveY = 0;
-                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x, aiPlayer.y + aiPlayer.speed)) {
-                            aiMoveX = 0; aiMoveY = aiPlayer.speed;
-                        } else if (!checkWallCollision(aiPlayer, aiPlayer.x, aiPlayer.y - aiPlayer.speed)) {
-                            aiMoveX = 0; aiMoveY = -aiPlayer.speed;
+                        // 여러 방향 시도
+                        const testAngles = [0, Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4];
+                        let foundPath = false;
+                        
+                        for (let angle of testAngles) {
+                            const testX = Math.cos(angle) * aiPlayer.speed;
+                            const testY = Math.sin(angle) * aiPlayer.speed;
+                            
+                            if (!checkWallCollision(aiPlayer, aiPlayer.x + testX, aiPlayer.y + testY)) {
+                                aiMoveX = testX;
+                                aiMoveY = testY;
+                                foundPath = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundPath) {
+                            aiMoveX = 0;
+                            aiMoveY = 0;
                         }
                     }
                     
                     movePlayer(aiPlayer, aiMoveX, aiMoveY);
                     
-                    // AI 사격 (레벨에 따라 정확도와 발사 빈도 증가)
+                    // AI 사격 (향상된 정확도와 예측 사격)
                     const aiAccuracy = aiPlayer.aiAccuracy || 0.7;
-                    const shootChance = 0.04 + (aiPlayer.level - 1) * 0.01;
+                    const shootChance = 0.06 + (aiPlayer.level - 1) * 0.015; // 사격 빈도 증가
                     
-                    if (Math.random() < shootChance && dist < 400) {
+                    if (Math.random() < shootChance && dist < 500) { // 사거리 증가
                         const now = Date.now();
                         const fireRate = aiPlayer.fireRate || 200;
                         
                         if (now - aiPlayer.lastShotTime >= fireRate) {
                             aiPlayer.lastShotTime = now;
                             
-                            // 정확도에 따라 조준점 흔들림
-                            const inaccuracy = (1 - aiAccuracy) * 100;
-                            const targetX = target.x + (Math.random() - 0.5) * inaccuracy;
-                            const targetY = target.y + (Math.random() - 0.5) * inaccuracy;
+                            // 예측 사격 (플레이어 움직임 예측)
+                            let targetX = target.x;
+                            let targetY = target.y;
+                            
+                            // 레벨이 높으면 예측 사격
+                            if (aiPlayer.level >= 3) {
+                                const bulletSpeed = 8;
+                                const timeToHit = dist / bulletSpeed;
+                                
+                                // 플레이어의 이전 위치를 기억하지 않으므로 현재 위치 기반 예측
+                                let predictX = 0, predictY = 0;
+                                if (keys['w']) predictY = -currentPlayer.speed * timeToHit;
+                                if (keys['s']) predictY = currentPlayer.speed * timeToHit;
+                                if (keys['a']) predictX = -currentPlayer.speed * timeToHit;
+                                if (keys['d']) predictX = currentPlayer.speed * timeToHit;
+                                
+                                targetX += predictX;
+                                targetY += predictY;
+                            }
+                            
+                            // 정확도에 따라 조준점 흔들림 (레벨이 높을수록 정확)
+                            const inaccuracy = (1 - aiAccuracy) * 60;
+                            targetX += (Math.random() - 0.5) * inaccuracy;
+                            targetY += (Math.random() - 0.5) * inaccuracy;
                             
                             if (aiPlayer.primaryWeapon === 'diamond') {
                                 const angle1 = Math.atan2(targetY - aiPlayer.y, targetX - aiPlayer.x) - 0.2;
@@ -678,8 +762,8 @@
             gameState.enemyLevel++;
             gameState.gamePhase = 'shop';
             
-            // 플레이어 보상
-            currentPlayer.money = Math.min(4000, currentPlayer.money + 300);
+            // 플레이어 보상 (150원으로 감소)
+            currentPlayer.money = Math.min(4000, currentPlayer.money + 150);
             currentPlayer.alive = true;
             currentPlayer.health = currentPlayer.maxHealth;
             
