@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import User from './models/user.js';
 import Score from './models/score.js';
+import Reward from './models/reward.js';
 
 // ES6 모듈에서 __dirname 사용을 위한 설정
 const __filename = fileURLToPath(import.meta.url);
@@ -191,19 +192,19 @@ app.post('/api/students/:studentId/rewards', async (req, res) => {
       return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
     }
 
-    const newReward = {
+    const newReward = new Reward({
+      studentId,
       title,
       description: description || '',
       earnedAt: new Date(),
       claimed: false
-    };
+    });
 
-    user.rewards.push(newReward);
-    await user.save();
+    await newReward.save();
 
     res.status(201).json({ 
       message: '보상이 추가되었습니다.', 
-      reward: user.rewards[user.rewards.length - 1] 
+      reward: newReward
     });
   } catch (error) {
     console.error('보상 추가 오류:', error);
@@ -222,10 +223,12 @@ app.get('/api/students/:studentId/rewards', async (req, res) => {
       return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
     }
 
+    const rewards = await Reward.find({ studentId }).sort({ earnedAt: -1 });
+
     res.json({ 
       studentId: user.studentId,
       name: user.name,
-      rewards: user.rewards 
+      rewards 
     });
   } catch (error) {
     console.error('보상 조회 오류:', error);
@@ -244,10 +247,14 @@ app.put('/api/students/:studentId/rewards/:rewardId/claim', async (req, res) => 
       return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
     }
 
-    const reward = user.rewards.id(rewardId);
+    const reward = await Reward.findById(rewardId);
     
     if (!reward) {
       return res.status(404).json({ error: '해당 보상을 찾을 수 없습니다.' });
+    }
+
+    if (reward.studentId !== studentId) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
 
     if (reward.claimed) {
@@ -256,7 +263,7 @@ app.put('/api/students/:studentId/rewards/:rewardId/claim', async (req, res) => 
 
     reward.claimed = true;
     reward.claimedAt = new Date();
-    await user.save();
+    await reward.save();
 
     res.json({ 
       message: '보상을 수령했습니다.', 
@@ -279,7 +286,10 @@ app.get('/api/students/:studentId/rewards/unclaimed', async (req, res) => {
       return res.status(404).json({ error: '해당 학생을 찾을 수 없습니다.' });
     }
 
-    const unclaimedRewards = user.rewards.filter(reward => !reward.claimed);
+    const unclaimedRewards = await Reward.find({ 
+      studentId, 
+      claimed: false 
+    }).sort({ earnedAt: -1 });
 
     res.json({ 
       studentId: user.studentId,
