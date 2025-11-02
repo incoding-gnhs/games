@@ -41,6 +41,113 @@ app.use('/games', express.static(path.join(__dirname, 'games')));
 
 // ==================== API 엔드포인트 ====================
 
+// 로그인/회원가입 API
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { studentId, name } = req.body;
+    
+    // 입력 유효성 검증
+    if (!studentId || !name) {
+      return res.status(400).json({ error: '학번과 이름을 입력해주세요.' });
+    }
+
+    // 학번 형식 검증 (5자리 숫자)
+    if (!/^\d{5}$/.test(studentId)) {
+      return res.status(400).json({ error: '학번은 5자리 숫자로 입력해주세요.' });
+    }
+
+    // 이름 형식 검증 (2-3글자)
+    if (name.length < 2 || name.length > 3) {
+      return res.status(400).json({ error: '이름은 2글자 또는 3글자로 입력해주세요.' });
+    }
+
+    // 학번으로 사용자 찾기
+    let user = await User.findOne({ studentId });
+    
+    if (user) {
+      // 사용자가 존재하는 경우
+      if (user.name === name) {
+        // 이름이 일치하면 로그인 성공
+        return res.json({ 
+          success: true,
+          action: 'login',
+          message: '로그인되었습니다.', 
+          user: {
+            studentId: user.studentId,
+            name: user.name
+          }
+        });
+      } else {
+        // 이름이 불일치하면 기존 이름 알려주기
+        return res.json({ 
+          success: false,
+          action: 'name_mismatch',
+          message: '이름이 일치하지 않습니다.',
+          existingName: user.name,
+          studentId: user.studentId
+        });
+      }
+    } else {
+      // 사용자가 없으면 새로 생성
+      user = new User({ name, studentId });
+      await user.save();
+      
+      return res.status(201).json({ 
+        success: true,
+        action: 'signup',
+        message: '회원가입이 완료되었습니다.', 
+        user: {
+          studentId: user.studentId,
+          name: user.name
+        }
+      });
+    }
+  } catch (error) {
+    console.error('로그인 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 이름 변경 API
+app.put('/api/auth/update-name', async (req, res) => {
+  try {
+    const { studentId, newName } = req.body;
+    
+    if (!studentId || !newName) {
+      return res.status(400).json({ error: '학번과 새 이름을 입력해주세요.' });
+    }
+
+    // 이름 형식 검증
+    if (newName.length < 2 || newName.length > 3) {
+      return res.status(400).json({ error: '이름은 2글자 또는 3글자로 입력해주세요.' });
+    }
+
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학번을 찾을 수 없습니다.' });
+    }
+
+    const oldName = user.name;
+    user.name = newName;
+    await user.save();
+
+    res.json({ 
+      success: true,
+      message: '이름이 변경되었습니다.',
+      oldName,
+      newName,
+      user: {
+        studentId: user.studentId,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('이름 변경 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
 // 학생 생성 또는 조회
 app.post('/api/students', async (req, res) => {
   try {
@@ -191,7 +298,7 @@ app.get('/api/students/:studentId/rewards/unclaimed', async (req, res) => {
 app.post('/api/games/:gameName/scores', async (req, res) => {
   try {
     const { gameName } = req.params;
-    const { studentId, score, playTime } = req.body;
+    const { studentId, score } = req.body;
 
     if (!studentId || score === undefined) {
       return res.status(400).json({ error: '학번과 점수는 필수입니다.' });
@@ -200,8 +307,7 @@ app.post('/api/games/:gameName/scores', async (req, res) => {
     const newScore = new Score({
       studentId,
       gameName,
-      score,
-      playTime: playTime || 0
+      score
     });
 
     await newScore.save();
@@ -232,7 +338,6 @@ app.get('/api/games/:gameName/rankings', async (req, res) => {
           _id: '$studentId',
           studentId: { $first: '$studentId' },
           score: { $first: '$score' },
-          playTime: { $first: '$playTime' },
           createdAt: { $first: '$createdAt' }
         }
       },
@@ -244,7 +349,6 @@ app.get('/api/games/:gameName/rankings', async (req, res) => {
           _id: 0,
           studentId: 1,
           score: 1,
-          playTime: 1,
           createdAt: 1
         }
       }
@@ -287,7 +391,6 @@ app.get('/api/games/:gameName/top/:topN', async (req, res) => {
           _id: '$studentId',
           studentId: { $first: '$studentId' },
           score: { $first: '$score' },
-          playTime: { $first: '$playTime' },
           createdAt: { $first: '$createdAt' }
         }
       },
@@ -298,7 +401,6 @@ app.get('/api/games/:gameName/top/:topN', async (req, res) => {
           _id: 0,
           studentId: 1,
           score: 1,
-          playTime: 1,
           createdAt: 1
         }
       }
@@ -322,7 +424,7 @@ app.get('/api/games/:gameName/students/:studentId', async (req, res) => {
 
     const scores = await Score.find({ gameName, studentId })
       .sort({ score: -1, createdAt: -1 })
-      .select('score playTime createdAt');
+      .select('score createdAt');
 
     if (scores.length === 0) {
       return res.status(404).json({ error: '해당 학생의 게임 기록이 없습니다.' });
@@ -355,7 +457,7 @@ app.get('/api/games/:gameName/students/:studentId/best', async (req, res) => {
 
     const bestScore = await Score.findOne({ gameName, studentId })
       .sort({ score: -1 })
-      .select('score playTime createdAt');
+      .select('score createdAt');
 
     if (!bestScore) {
       return res.status(404).json({ error: '해당 학생의 게임 기록이 없습니다.' });
@@ -398,7 +500,6 @@ app.get('/api/students/:studentId/games', async (req, res) => {
         gameStats[score.gameName] = {
           gameName: score.gameName,
           bestScore: score.score,
-          playTime: score.playTime,
           achievedAt: score.createdAt
         };
       }

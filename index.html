@@ -33,6 +33,218 @@
             font-size: 2.5rem;
         }
 
+        /* 로그인 모달 스타일 */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-modal.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-box h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .form-group .error-message {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .form-group .error-message.show {
+            display: block;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #0056b3;
+        }
+
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 이름 변경 확인 모달 */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .confirm-modal.hidden {
+            display: none;
+        }
+
+        .confirm-box {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .confirm-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .confirm-box p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .confirm-box .existing-name {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .confirm-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-yes {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-yes:hover {
+            background: #0056b3;
+        }
+
+        .btn-no {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-no:hover {
+            background: #545b62;
+        }
+
+        /* 로그아웃 버튼 */
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .user-info.show {
+            display: flex;
+        }
+
+        .user-info .user-name {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .user-info .user-id {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
         .games-grid {
             display: none;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -112,6 +324,64 @@
     </style>
 </head>
 <body>
+    <!-- 로그인 모달 -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-box">
+            <h2>🎮 게임 로그인</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="studentId">학번 (5자리 숫자)</label>
+                    <input 
+                        type="text" 
+                        id="studentId" 
+                        name="studentId" 
+                        placeholder="예: 12345" 
+                        maxlength="5"
+                        required
+                    >
+                    <div class="error-message" id="studentIdError">학번은 5자리 숫자로 입력해주세요.</div>
+                </div>
+                <div class="form-group">
+                    <label for="name">이름 (2-3글자)</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        placeholder="예: 홍길동" 
+                        maxlength="3"
+                        required
+                    >
+                    <div class="error-message" id="nameError">이름은 2글자 또는 3글자로 입력해주세요.</div>
+                </div>
+                <button type="submit" class="login-btn">로그인 / 회원가입</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 이름 변경 확인 모달 -->
+    <div class="confirm-modal hidden" id="confirmModal">
+        <div class="confirm-box">
+            <h3>⚠️ 이름 불일치</h3>
+            <p>
+                등록된 이름은 <span class="existing-name" id="existingName"></span>입니다.<br>
+                입력하신 이름으로 변경하시겠습니까?
+            </p>
+            <div class="confirm-buttons">
+                <button class="btn-yes" id="confirmYes">예, 변경합니다</button>
+                <button class="btn-no" id="confirmNo">아니오</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자 정보 및 로그아웃 -->
+    <div class="user-info" id="userInfo">
+        <div>
+            <div class="user-name" id="displayName"></div>
+            <div class="user-id" id="displayStudentId"></div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">로그아웃</button>
+    </div>
+
     <div class="container">
         <h1>🎮 게임 목록</h1>
         
@@ -128,6 +398,189 @@
     </div>
 
     <script>
+        // ==================== 로그인 관련 기능 ====================
+        let currentUser = null;
+
+        // 로컬 스토리지에서 사용자 정보 가져오기
+        function getStoredUser() {
+            const userJson = localStorage.getItem('gameUser');
+            return userJson ? JSON.parse(userJson) : null;
+        }
+
+        // 로컬 스토리지에 사용자 정보 저장
+        function storeUser(user) {
+            localStorage.setItem('gameUser', JSON.stringify(user));
+            currentUser = user;
+        }
+
+        // 로컬 스토리지에서 사용자 정보 삭제
+        function clearStoredUser() {
+            localStorage.removeItem('gameUser');
+            currentUser = null;
+        }
+
+        // 로그인 상태 확인 및 UI 업데이트
+        function checkLoginStatus() {
+            const user = getStoredUser();
+            const loginModal = document.getElementById('loginModal');
+            const userInfo = document.getElementById('userInfo');
+            
+            if (user) {
+                // 로그인 상태
+                currentUser = user;
+                loginModal.classList.add('hidden');
+                userInfo.classList.add('show');
+                document.getElementById('displayName').textContent = user.name;
+                document.getElementById('displayStudentId').textContent = `학번: ${user.studentId}`;
+                return true;
+            } else {
+                // 비로그인 상태
+                loginModal.classList.remove('hidden');
+                userInfo.classList.remove('show');
+                return false;
+            }
+        }
+
+        // 학번 유효성 검증
+        function validateStudentId(studentId) {
+            return /^\d{5}$/.test(studentId);
+        }
+
+        // 이름 유효성 검증
+        function validateName(name) {
+            return name.length >= 2 && name.length <= 3;
+        }
+
+        // 로그인 처리
+        async function handleLogin(studentId, name) {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ studentId, name })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 로그인 또는 회원가입 성공
+                    storeUser(data.user);
+                    checkLoginStatus();
+                    
+                    // 게임 목록 렌더링
+                    await loadAndRenderGames();
+                } else if (data.action === 'name_mismatch') {
+                    // 이름 불일치 - 확인 모달 표시
+                    showConfirmModal(data.existingName, studentId, name);
+                } else {
+                    alert(data.error || '로그인에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('로그인 오류:', error);
+                alert('서버와의 연결에 실패했습니다.');
+            }
+        }
+
+        // 이름 변경 처리
+        async function handleNameUpdate(studentId, newName) {
+            try {
+                const response = await fetch('/api/auth/update-name', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ studentId, newName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    storeUser(data.user);
+                    checkLoginStatus();
+                    
+                    // 게임 목록 렌더링
+                    await loadAndRenderGames();
+                } else {
+                    alert(data.error || '이름 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('이름 변경 오류:', error);
+                alert('서버와의 연결에 실패했습니다.');
+            }
+        }
+
+        // 이름 변경 확인 모달 표시
+        function showConfirmModal(existingName, studentId, newName) {
+            const confirmModal = document.getElementById('confirmModal');
+            const existingNameSpan = document.getElementById('existingName');
+            
+            existingNameSpan.textContent = existingName;
+            confirmModal.classList.remove('hidden');
+
+            // 예 버튼
+            document.getElementById('confirmYes').onclick = async () => {
+                confirmModal.classList.add('hidden');
+                await handleNameUpdate(studentId, newName);
+            };
+
+            // 아니오 버튼
+            document.getElementById('confirmNo').onclick = () => {
+                confirmModal.classList.add('hidden');
+                alert('로그인이 취소되었습니다. 정확한 이름을 입력해주세요.');
+            };
+        }
+
+        // 로그인 폼 제출 이벤트
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const studentIdInput = document.getElementById('studentId');
+            const nameInput = document.getElementById('name');
+            const studentId = studentIdInput.value.trim();
+            const name = nameInput.value.trim();
+            
+            // 에러 메시지 초기화
+            document.getElementById('studentIdError').classList.remove('show');
+            document.getElementById('nameError').classList.remove('show');
+            
+            let hasError = false;
+            
+            // 학번 검증
+            if (!validateStudentId(studentId)) {
+                document.getElementById('studentIdError').classList.add('show');
+                hasError = true;
+            }
+            
+            // 이름 검증
+            if (!validateName(name)) {
+                document.getElementById('nameError').classList.add('show');
+                hasError = true;
+            }
+            
+            if (hasError) {
+                return;
+            }
+            
+            // 로그인 처리
+            await handleLogin(studentId, name);
+        });
+
+        // 숫자만 입력 가능하도록 제한
+        document.getElementById('studentId').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+
+        // 로그아웃 버튼
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            clearStoredUser();
+            checkLoginStatus();
+            location.reload();
+        });
+
+        // ==================== 게임 목록 관련 기능 ====================
+        // ==================== 게임 목록 관련 기능 ====================
         // 게임 데이터를 저장할 변수
         let allGames = [];
         let desktopOnlyGames = [];
@@ -263,33 +716,48 @@
             });
         }
 
-        // 초기 렌더링
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 게임 정보 로드
+        // 게임 목록 로드 및 렌더링
+        async function loadAndRenderGames() {
             const loaded = await loadGamesInfo();
             
             if (loaded) {
-                renderGames(); // 데스크탑 게임 목록 렌더링
-                renderMobileGames(); // 모바일 게임 목록 렌더링
+                renderGames();
+                renderMobileGames();
             } else {
-                // 로드 실패 시 에러 메시지 표시
                 const gamesGrid = document.getElementById('gamesGrid');
                 const mobileGamesGrid = document.getElementById('mobileGamesGrid');
                 gamesGrid.innerHTML = '<div class="loading">게임 정보를 불러오는데 실패했습니다.</div>';
                 mobileGamesGrid.innerHTML = '<div class="loading">게임 정보를 불러오는데 실패했습니다.</div>';
             }
+        }
+
+        // ==================== 초기화 ====================
+        // 초기 렌더링
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 로그인 상태 확인
+            const isLoggedIn = checkLoginStatus();
+            
+            if (isLoggedIn) {
+                // 로그인 상태면 게임 목록 로드
+                await loadAndRenderGames();
+            }
         });
 
         // 화면 크기 변경 시 다시 확인
         window.addEventListener('resize', () => {
-            renderGames();
-            renderMobileGames();
-        });
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
+            if (currentUser) {
                 renderGames();
                 renderMobileGames();
-            }, 100); // 방향 변경 후 약간의 지연
+            }
+        });
+        
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                if (currentUser) {
+                    renderGames();
+                    renderMobileGames();
+                }
+            }, 100);
         });
     </script>
 </body>
