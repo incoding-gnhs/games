@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>클릭 게임 - 샘플</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        /* 로그인 화면 */
+        .login-screen {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .login-screen h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .login-screen p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            color: #333;
+        }
+
+        .modal-content h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+            margin: 0;
+        }
+
+        /* 게임 화면 */
+        .game-screen {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .game-header h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .game-area {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .click-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .click-button:hover {
+            transform: scale(1.05);
+        }
+
+        .click-button:active {
+            transform: scale(0.95);
+        }
+
+        .timer {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        /* 게임 오버 화면 */
+        .gameover-screen {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .gameover-screen h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+
+        .gameover-info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .gameover-info .user-detail {
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 12px 0;
+        }
+
+        .gameover-info .user-detail .label {
+            color: #666;
+            font-weight: normal;
+            font-size: 16px;
+            margin-right: 8px;
+        }
+
+        .gameover-info .user-value {
+            color: #667eea;
+            font-size: 24px;
+        }
+
+        .gameover-info .final-score {
+            color: #667eea;
+            font-size: 56px;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+        }
+
+        .gameover-info .score-label {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .ranking-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .ranking-info h3 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .percentile {
+            color: #667eea;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .ranking-list {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-item.current-user {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            font-weight: bold;
+            border-left: 4px solid #667eea;
+        }
+
+        .ranking-item .rank {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 40px;
+        }
+
+        .ranking-item .student-id {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .ranking-item .score {
+            color: #666;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .ranking-item.current-user .student-id {
+            color: #667eea;
+        }
+
+        .ranking-item.current-user .score {
+            color: #667eea;
+        }
+
+        .loading-ranking {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        .gameover-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .loading {
+            color: #667eea;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 로그인 화면 -->
+        <div id="loginScreen" class="login-screen">
+            <h1>🎮 클릭 게임</h1>
+            <p>30초 안에 최대한 많이 클릭하세요!</p>
+            
+            <div class="input-group">
+                <label for="studentId">학번</label>
+                <input type="text" id="studentId" placeholder="학번을 입력하세요 (예: 20701)">
+            </div>
+            
+            <div class="input-group">
+                <label for="studentName">이름</label>
+                <input type="text" id="studentName" placeholder="이름을 입력하세요">
+            </div>
+            
+            <div id="errorMessage" class="error-message hidden"></div>
+            <div id="loadingMessage" class="loading hidden">확인 중...</div>
+            
+            <button class="btn btn-primary" onclick="handleLogin()">게임 시작</button>
+            <button class="btn btn-secondary" onclick="startGuestMode()">게스트 모드</button>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="gameScreen" class="game-screen hidden">
+            <div class="game-header">
+                <h2>🎮 클릭 게임</h2>
+                <div class="user-info">
+                    <span>학번: <strong id="displayStudentId"></strong></span>
+                    <span>이름: <strong id="displayStudentName"></strong></span>
+                </div>
+            </div>
+
+            <div class="game-stats">
+                <div class="stat-item">
+                    <div class="stat-label">점수</div>
+                    <div class="stat-value" id="scoreDisplay">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">남은 시간</div>
+                    <div class="stat-value" id="timerDisplay">30</div>
+                </div>
+            </div>
+
+            <div class="game-area">
+                <button class="click-button" id="clickButton" onclick="handleClick()">
+                    클릭!
+                </button>
+            </div>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="gameoverScreen" class="gameover-screen hidden">
+            <h1>🎉 게임 종료!</h1>
+            
+            <div class="gameover-info">
+                <div class="user-detail">
+                    <span class="label">학번:</span>
+                    <span class="user-value" id="finalStudentId"></span>
+                </div>
+                <div class="user-detail">
+                    <span class="label">이름:</span>
+                    <span class="user-value" id="finalStudentName"></span>
+                </div>
+                <div class="final-score" id="finalScore">0</div>
+                <div class="score-label">클릭 수</div>
+            </div>
+
+            <!-- 랭킹 정보 -->
+            <div class="ranking-info" id="rankingInfo">
+                <h3>📊 랭킹</h3>
+                <div class="percentile" id="percentileInfo"></div>
+                <div class="ranking-list" id="rankingList">
+                    <div class="loading-ranking">랭킹 정보를 불러오는 중...</div>
+                </div>
+            </div>
+
+            <div class="gameover-buttons">
+                <button class="btn btn-primary" onclick="restartGame()">🔄 다시 시작</button>
+                <button class="btn btn-secondary" onclick="changeUser()">👤 사용자 바꾸기</button>
+                <button class="btn btn-secondary" onclick="goHome()">🏠 홈으로</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이름 변경 확인 모달 -->
+    <div id="nameChangeModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>⚠️ 이름 불일치</h3>
+            <p>학번 <strong id="modalStudentId"></strong>의 기존 이름은 <strong id="modalOldName"></strong>입니다.</p>
+            <p>입력한 이름 <strong id="modalNewName"></strong>으로 변경하시겠습니까?</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeNameModal()">취소</button>
+                <button class="btn btn-primary" onclick="confirmNameChange()">이름 변경</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            studentId: '',
+            studentName: '',
+            score: 0,
+            timeLeft: 30,
+            isPlaying: false,
+            isGuest: false,
+            timerInterval: null
+        };
+
+        // API 기본 URL
+        const API_URL = window.location.origin;
+
+        // 화면 전환 함수
+        function showScreen(screenName) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('gameoverScreen').classList.add('hidden');
+            
+            if (screenName === 'login') {
+                document.getElementById('loginScreen').classList.remove('hidden');
+            } else if (screenName === 'game') {
+                document.getElementById('gameScreen').classList.remove('hidden');
+            } else if (screenName === 'gameover') {
+                document.getElementById('gameoverScreen').classList.remove('hidden');
+            }
+        }
+
+        // 에러 메시지 표시
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+        }
+
+        // 로딩 표시
+        function showLoading(show) {
+            document.getElementById('loadingMessage').classList.toggle('hidden', !show);
+        }
+
+        // 로그인 처리
+        async function handleLogin() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+
+            if (!studentId || !studentName) {
+                showError('학번과 이름을 모두 입력해주세요.');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                // 학생 정보 확인
+                const response = await fetch(`${API_URL}/api/students`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ studentId, name: studentName })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 이미 존재하는 학생인 경우
+                    if (data.user && data.user.name !== studentName) {
+                        // 이름이 다른 경우 - 모달 표시
+                        document.getElementById('modalStudentId').textContent = studentId;
+                        document.getElementById('modalOldName').textContent = data.user.name;
+                        document.getElementById('modalNewName').textContent = studentName;
+                        document.getElementById('nameChangeModal').classList.remove('hidden');
+                        showLoading(false);
+                        return;
+                    }
+                    
+                    // 새 학생이거나 이름이 같은 경우 - 게임 시작
+                    gameState.studentId = studentId;
+                    gameState.studentName = data.user ? data.user.name : studentName;
+                    gameState.isGuest = false;
+                    startGame();
+                } else {
+                    showError(data.error || '로그인에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('서버 연결에 실패했습니다.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 이름 변경 모달 닫기
+        function closeNameModal() {
+            document.getElementById('nameChangeModal').classList.add('hidden');
+        }
+
+        // 이름 변경 확인
+        async function confirmNameChange() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const newName = document.getElementById('studentName').value.trim();
+
+            closeNameModal();
+            showLoading(true);
+
+            try {
+                // TODO: 이름 변경 API 구현 필요
+                // 현재는 그냥 진행
+                gameState.studentId = studentId;
+                gameState.studentName = newName;
+                gameState.isGuest = false;
+                startGame();
+            } catch (error) {
+                console.error('Name change error:', error);
+                showError('이름 변경에 실패했습니다.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 게스트 모드
+        function startGuestMode() {
+            gameState.studentId = 'GUEST';
+            gameState.studentName = '게스트';
+            gameState.isGuest = true;
+            startGame();
+        }
+
+        // 게임 시작
+        function startGame() {
+            gameState.score = 0;
+            gameState.timeLeft = 30;
+            gameState.isPlaying = true;
+
+            // UI 업데이트
+            document.getElementById('displayStudentId').textContent = gameState.studentId;
+            document.getElementById('displayStudentName').textContent = gameState.studentName;
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('timerDisplay').textContent = '30';
+
+            showScreen('game');
+
+            // 타이머 시작
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('timerDisplay').textContent = gameState.timeLeft;
+
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 클릭 처리
+        function handleClick() {
+            if (!gameState.isPlaying) return;
+
+            gameState.score++;
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+
+            // 버튼 애니메이션
+            const button = document.getElementById('clickButton');
+            button.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        // 게임 종료
+        async function endGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+
+            // 게임 오버 화면 표시
+            document.getElementById('finalStudentId').textContent = gameState.studentId;
+            document.getElementById('finalStudentName').textContent = gameState.studentName;
+            document.getElementById('finalScore').textContent = gameState.score;
+
+            showScreen('gameover');
+
+            // 점수 저장 (게스트가 아닌 경우에만)
+            if (!gameState.isGuest && gameState.score > 0) {
+                try {
+                    const response = await fetch(`${API_URL}/api/games/클릭게임/scores`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            studentId: gameState.studentId,
+                            score: gameState.score,
+                            playTime: 30
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('점수가 저장되었습니다.');
+                        // 점수 저장 후 랭킹 정보 로드
+                        await loadRankingInfo();
+                    }
+                } catch (error) {
+                    console.error('Score save error:', error);
+                }
+            } else if (gameState.isGuest) {
+                // 게스트는 랭킹 정보만 표시
+                await loadRankingInfo();
+            }
+        }
+
+        // 랭킹 정보 로드
+        async function loadRankingInfo() {
+            try {
+                const currentScore = gameState.score;
+                
+                // 1. 전체 랭킹 가져오기 (각 학생의 최고 기록만)
+                const rankingsResponse = await fetch(`${API_URL}/api/games/클릭게임/rankings?limit=100`);
+                const rankingsData = await rankingsResponse.json();
+
+                if (!rankingsData.rankings || rankingsData.rankings.length === 0) {
+                    document.getElementById('rankingList').innerHTML = '<div class="loading-ranking">아직 랭킹 데이터가 없습니다.</div>';
+                    return;
+                }
+
+                // 2. 현재 점수로 순위 계산 (전체 플레이 기록 기준)
+                let myRankByCurrentScore = 1;
+                let totalPlaysByCurrentScore = 1;
+                
+                if (!gameState.isGuest) {
+                    try {
+                        // 전체 점수 기록에서 현재 점수보다 높은 점수 개수 세기
+                        const allScoresResponse = await fetch(`${API_URL}/api/games/클릭게임/students/${gameState.studentId}`);
+                        
+                        if (allScoresResponse.ok) {
+                            // 모든 플레이 기록 가져오기 (aggregation 없이)
+                            const scoresData = await allScoresResponse.json();
+                            
+                            // 전체 플레이어들의 모든 기록을 가져와서 현재 점수와 비교
+                            // 실제로는 서버에서 계산해야 하지만, 간단히 랭킹 데이터를 활용
+                            const allRankings = rankingsData.rankings;
+                            myRankByCurrentScore = allRankings.filter(r => r.score > currentScore).length + 1;
+                            totalPlaysByCurrentScore = allRankings.length + 1; // 나를 포함
+                        }
+                    } catch (error) {
+                        console.error('Current score ranking error:', error);
+                    }
+                }
+
+                // 3. 내 최고 기록으로 랭킹에서의 위치 찾기
+                let myBestRank = rankingsData.rankings.findIndex(r => 
+                    r.studentId === gameState.studentId
+                ) + 1;
+
+                // 내가 랭킹에 없으면 (첫 플레이 등) 현재 점수로 위치 계산
+                if (myBestRank === 0) {
+                    myBestRank = rankingsData.rankings.filter(r => r.score > currentScore).length + 1;
+                }
+
+                const totalPlayers = rankingsData.total;
+                
+                // 4. 상위 퍼센트는 현재 점수 기준으로 계산
+                const percentileByCurrentScore = totalPlayers > 0 
+                    ? Math.round((1 - (myRankByCurrentScore - 1) / totalPlayers) * 100) 
+                    : 100;
+
+                // 5. 상위 퍼센트 표시 (현재 점수 기준)
+                document.getElementById('percentileInfo').innerHTML = `
+                    <span class="rank-badge">현재 기록: ${myRankByCurrentScore}위</span>
+                    <div style="margin-top: 10px;">상위 ${100 - percentileByCurrentScore}% 입니다!</div>
+                `;
+
+                // 6. 랭킹 목록은 최고 기록 기준으로 표시
+                const startIdx = Math.max(0, myBestRank - 6);
+                const endIdx = Math.min(rankingsData.rankings.length, myBestRank + 5);
+                const nearbyRankings = rankingsData.rankings.slice(startIdx, endIdx);
+
+                let rankingHTML = '';
+                nearbyRankings.forEach((ranking, index) => {
+                    const actualRank = startIdx + index + 1;
+                    const isCurrentUser = !gameState.isGuest && ranking.studentId === gameState.studentId;
+                    
+                    rankingHTML += `
+                        <div class="ranking-item ${isCurrentUser ? 'current-user' : ''}">
+                            <span class="rank">${actualRank}위</span>
+                            <span class="student-id">${ranking.studentId}${isCurrentUser ? ' (나 - 최고기록)' : ''}</span>
+                            <span class="score">${ranking.score}점</span>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('rankingList').innerHTML = rankingHTML;
+
+            } catch (error) {
+                console.error('Ranking load error:', error);
+                document.getElementById('rankingList').innerHTML = '<div class="loading-ranking">랭킹 정보를 불러오는데 실패했습니다.</div>';
+            }
+        }
+
+        // 다시 시작
+        function restartGame() {
+            startGame();
+        }
+
+        // 사용자 바꾸기
+        function changeUser() {
+            // 입력 필드 초기화
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentName').value = '';
+            showScreen('login');
+        }
+
+        // 홈으로
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // 엔터 키로 로그인
+        document.getElementById('studentId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('studentName').focus();
+        });
+
+        document.getElementById('studentName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
+</body>
+</html>

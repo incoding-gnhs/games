@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>클릭 게임 v2 - 공통 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        /* 게임 화면 */
+        .game-screen {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .game-screen.active {
+            display: block;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .game-header h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .game-area {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .click-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .click-button:hover {
+            transform: scale(1.05);
+        }
+
+        .click-button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="gameContainer">
+        <!-- 게임 시스템이 여기에 로그인/게임오버 화면을 추가합니다 -->
+
+        <!-- 게임 화면 -->
+        <div id="gameScreen" class="game-screen">
+            <div class="game-header">
+                <h2>🎮 클릭 게임</h2>
+                <div class="user-info">
+                    <span>학번: <strong id="displayStudentId"></strong></span>
+                    <span>이름: <strong id="displayStudentName"></strong></span>
+                </div>
+            </div>
+
+            <div class="game-stats">
+                <div class="stat-item">
+                    <div class="stat-label">점수</div>
+                    <div class="stat-value" id="scoreDisplay">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">남은 시간</div>
+                    <div class="stat-value" id="timerDisplay">30</div>
+                </div>
+            </div>
+
+            <div class="game-area">
+                <button class="click-button" id="clickButton">
+                    클릭!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 게임 시스템 로드 -->
+    <script src="/game-system.js"></script>
+    
+    <script>
+        // 게임 시스템 초기화
+        const gameSystem = new GameSystem('클릭게임v2');
+        gameSystem.initialize('gameContainer');
+
+        // 게임 상태
+        let score = 0;
+        let timeLeft = 30;
+        let timerInterval = null;
+
+        // 게임 시작 콜백
+        gameSystem.onGameStart((gameState) => {
+            console.log('게임 시작:', gameState);
+            
+            // 사용자 정보 표시
+            document.getElementById('displayStudentId').textContent = gameState.studentId;
+            document.getElementById('displayStudentName').textContent = gameState.studentName;
+            
+            // 게임 초기화
+            score = 0;
+            timeLeft = 30;
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('timerDisplay').textContent = '30';
+            
+            // 게임 화면 표시
+            document.getElementById('gameScreen').classList.add('active');
+            
+            // 타이머 시작
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerDisplay').textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+            
+            // 클릭 버튼 이벤트
+            setupClickButton();
+        });
+
+        // 게임 종료 콜백
+        gameSystem.onGameEnd((gameState) => {
+            console.log('게임 종료:', gameState);
+            document.getElementById('gameScreen').classList.remove('active');
+        });
+
+        // 클릭 버튼 설정
+        function setupClickButton() {
+            const button = document.getElementById('clickButton');
+            button.onclick = () => {
+                if (!gameSystem.isPlaying()) return;
+
+                score++;
+                document.getElementById('scoreDisplay').textContent = score;
+
+                // 버튼 애니메이션
+                button.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    button.style.transform = 'scale(1)';
+                }, 100);
+            };
+        }
+
+        // 게임 종료
+        function endGame() {
+            clearInterval(timerInterval);
+            document.getElementById('gameScreen').classList.remove('active');
+            
+            // 게임 시스템의 endGame 호출
+            gameSystem.endGame(score, 30);
+        }
+
+        // 페이지 로드 시 로그인 화면 표시
+        window.addEventListener('load', () => {
+            gameSystem.showLoginScreen();
+        });
+    </script>
+</body>
+</html>

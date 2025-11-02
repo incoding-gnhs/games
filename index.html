@@ -128,32 +128,53 @@
     </div>
 
     <script>
-        // 게임 파일 목록 (하드코딩)
-        const allGames = [
-            { name: '유리잔-깨기.html', folder: 'all' },
-            { name: '턴제 배틀.html', folder: 'all' },
-            { name: '피아노 타일.html', folder: 'all' }
-        ];
+        // 게임 데이터를 저장할 변수
+        let allGames = [];
+        let desktopOnlyGames = [];
+        let mobileOnlyGames = [];
+        let desktopGames = [];
+        let mobileGames = [];
 
-        const desktopOnlyGames = [
-            { name: '1vs1 슈팅.html', folder: 'desktop' },
-            { name: '레인 피하기.html', folder: 'desktop' },
-            { name: '우주 슈팅.html', folder: 'desktop' },
-            { name: 'mobile-shooter-game - 20701강병률.html', folder: 'desktop' },
-            { name: 'space-shooter-competitive - 20606김견우.html', folder: 'desktop' },
-            { name: 'subway_runner_game - 20725장호연.html', folder: 'desktop' }
-        ];
+        // info.json 파일에서 게임 정보 로드
+        async function loadGamesInfo() {
+            try {
+                const response = await fetch('games/info.json');
+                const gamesInfo = await response.json();
 
-        const mobileOnlyGames = [
-            { name: '스네이크.html', folder: 'mobile' },
-            { name: 'crossy_road_game.html', folder: 'mobile' }
-        ];
+                // 각 카테고리별로 게임 정보 변환
+                allGames = (gamesInfo.all || []).map(game => ({
+                    name: `${game.title}.html`,
+                    folder: 'all',
+                    description: game.description,
+                    author: game.author
+                }));
 
-        // PC용 게임 목록 (desktop + all)
-        let desktopGames = [...desktopOnlyGames, ...allGames];
+                desktopOnlyGames = (gamesInfo.desktop || []).map(game => ({
+                    name: `${game.title}.html`,
+                    folder: 'desktop',
+                    description: game.description,
+                    author: game.author
+                }));
 
-        // 모바일용 게임 목록 (mobile + all)
-        let mobileGames = [...mobileOnlyGames, ...allGames];
+                mobileOnlyGames = (gamesInfo.mobile || []).map(game => ({
+                    name: `${game.title}.html`,
+                    folder: 'mobile',
+                    description: game.description,
+                    author: game.author
+                }));
+
+                // PC용 게임 목록 (desktop + all)
+                desktopGames = [...desktopOnlyGames, ...allGames];
+
+                // 모바일용 게임 목록 (mobile + all)
+                mobileGames = [...mobileOnlyGames, ...allGames];
+
+                return true;
+            } catch (error) {
+                console.error('게임 정보를 불러오는데 실패했습니다:', error);
+                return false;
+            }
+        }
 
         // 화면 방향과 크기 확인
         function checkScreenOrientation() {
@@ -170,9 +191,13 @@
             card.className = 'game-card';
             card.onclick = () => navigateToGame(game.name, game.folder);
             
+            const authorInfo = game.author ? `<div class="game-id">${game.author}</div>` : '';
+            const descriptionInfo = game.description ? `<p style="font-size: 0.9rem; color: #888; margin-top: 8px;">${game.description}</p>` : '';
+            
             card.innerHTML = `
                 <div class="game-title">${gameId}</div>
-                <div class="game-id">${game.folder}</div>
+                ${authorInfo}
+                ${descriptionInfo}
             `;
             
             return card;
@@ -185,9 +210,13 @@
             card.className = 'game-card';
             card.onclick = () => navigateToGame(game.name, game.folder);
             
+            const authorInfo = game.author ? `<div class="game-id">${game.author}</div>` : '';
+            const descriptionInfo = game.description ? `<p style="font-size: 0.9rem; color: #888; margin-top: 8px;">${game.description}</p>` : '';
+            
             card.innerHTML = `
                 <div class="game-title">${gameId}</div>
-                <div class="game-id">${game.folder}</div>
+                ${authorInfo}
+                ${descriptionInfo}
             `;
             
             return card;
@@ -235,9 +264,20 @@
         }
 
         // 초기 렌더링
-        document.addEventListener('DOMContentLoaded', () => {
-            renderGames(); // 데스크탑 게임 목록 렌더링
-            renderMobileGames(); // 모바일 게임 목록 렌더링
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 게임 정보 로드
+            const loaded = await loadGamesInfo();
+            
+            if (loaded) {
+                renderGames(); // 데스크탑 게임 목록 렌더링
+                renderMobileGames(); // 모바일 게임 목록 렌더링
+            } else {
+                // 로드 실패 시 에러 메시지 표시
+                const gamesGrid = document.getElementById('gamesGrid');
+                const mobileGamesGrid = document.getElementById('mobileGamesGrid');
+                gamesGrid.innerHTML = '<div class="loading">게임 정보를 불러오는데 실패했습니다.</div>';
+                mobileGamesGrid.innerHTML = '<div class="loading">게임 정보를 불러오는데 실패했습니다.</div>';
+            }
         });
 
         // 화면 크기 변경 시 다시 확인
