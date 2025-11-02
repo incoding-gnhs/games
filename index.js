@@ -37,6 +37,40 @@ mongoose.connection.on('disconnected', () => {
   console.log('Mongoose 연결이 해제되었습니다.');
 });
 
+// ==================== 데이터 클리너 ====================
+// 10초마다 실행되어 User에 존재하지 않는 studentId를 가진 Score와 Reward 삭제
+async function cleanOrphanedData() {
+  try {
+    // 모든 사용자의 studentId 목록 가져오기
+    const users = await User.find({}, { studentId: 1, _id: 0 });
+    const validStudentIds = users.map(user => user.studentId);
+    
+    // User에 없는 studentId를 가진 Score 삭제
+    const scoreResult = await Score.deleteMany({ 
+      studentId: { $nin: validStudentIds } 
+    });
+    
+    // User에 없는 studentId를 가진 Reward 삭제
+    const rewardResult = await Reward.deleteMany({ 
+      studentId: { $nin: validStudentIds } 
+    });
+    
+    if (scoreResult.deletedCount > 0 || rewardResult.deletedCount > 0) {
+      console.log(`[클리너] Score ${scoreResult.deletedCount}개, Reward ${rewardResult.deletedCount}개 삭제됨`);
+    }
+  } catch (error) {
+    console.error('[클리너] 오류:', error);
+  }
+}
+
+// 10초마다 클리너 실행
+setInterval(cleanOrphanedData, 10000);
+
+// 서버 시작 시 한 번 실행
+cleanOrphanedData();
+
+// ==================== 정적 파일 제공 ====================
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/games', express.static(path.join(__dirname, 'games')));
 
