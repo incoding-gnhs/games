@@ -198,6 +198,7 @@
         var enemies = [];
         var stars = [];
         var particles = [];
+        var enemyBullets = [];
 
         var keys = {};
 
@@ -234,6 +235,7 @@
             bullets = [];
             enemies = [];
             particles = [];
+            enemyBullets = [];
             updateUI();
             gameLoop();
         }
@@ -254,14 +256,56 @@
         }
 
         function spawnEnemy() {
-            if (Math.random() < 0.02) {
-                enemies.push({
+            // 적 생성 빈도 증가 (0.02 -> 0.04)
+            if (Math.random() < 0.04) {
+                var enemyType = Math.random();
+                var enemy = {
                     x: Math.random() * (canvas.width - 40),
                     y: -40,
                     width: 40,
                     height: 40,
-                    speed: 2 + Math.random() * 2
-                });
+                    speed: 2 + Math.random() * 2,
+                    type: 'normal',
+                    vx: 0, // 수평 속도
+                    shootTimer: 0
+                };
+                
+                // 30% 확률로 사선 이동 적
+                if (enemyType < 0.3) {
+                    enemy.type = 'zigzag';
+                    enemy.vx = (Math.random() - 0.5) * 3; // -1.5 ~ 1.5
+                    enemy.color = '#ff8844';
+                }
+                // 25% 확률로 빠른 적
+                else if (enemyType < 0.55) {
+                    enemy.type = 'fast';
+                    enemy.speed = 4 + Math.random() * 2;
+                    enemy.color = '#ff44ff';
+                    enemy.width = 30;
+                    enemy.height = 30;
+                }
+                // 20% 확률로 강한 적 (체력 2)
+                else if (enemyType < 0.75) {
+                    enemy.type = 'strong';
+                    enemy.health = 2;
+                    enemy.speed = 1.5 + Math.random();
+                    enemy.color = '#ffaa00';
+                    enemy.width = 50;
+                    enemy.height = 50;
+                }
+                // 15% 확률로 사격하는 적
+                else if (enemyType < 0.9) {
+                    enemy.type = 'shooter';
+                    enemy.color = '#ff4444';
+                    enemy.shootTimer = Math.random() * 60;
+                }
+                // 10% 확률로 일반 적
+                else {
+                    enemy.type = 'normal';
+                    enemy.color = '#ff4444';
+                }
+                
+                enemies.push(enemy);
             }
         }
 
@@ -298,8 +342,38 @@
 
         function updateEnemies() {
             for (var i = enemies.length - 1; i >= 0; i--) {
-                enemies[i].y += enemies[i].speed;
-                if (enemies[i].y > canvas.height) {
+                var enemy = enemies[i];
+                
+                // 타입별 이동 패턴
+                if (enemy.type === 'zigzag') {
+                    enemy.x += enemy.vx;
+                    // 화면 경계에서 반사
+                    if (enemy.x <= 0 || enemy.x >= canvas.width - enemy.width) {
+                        enemy.vx *= -1;
+                    }
+                } else if (enemy.type === 'shooter') {
+                    // 사격하는 적은 천천히 내려오다가 멈춤
+                    if (enemy.y < 100) {
+                        enemy.y += enemy.speed;
+                    } else {
+                        // 일정 간격으로 발사
+                        enemy.shootTimer++;
+                        if (enemy.shootTimer >= 90) {
+                            enemyBullets.push({
+                                x: enemy.x + enemy.width / 2 - 3,
+                                y: enemy.y + enemy.height,
+                                width: 6,
+                                height: 12,
+                                speed: 4
+                            });
+                            enemy.shootTimer = 0;
+                        }
+                    }
+                }
+                
+                enemy.y += enemy.speed;
+                
+                if (enemy.y > canvas.height) {
                     enemies.splice(i, 1);
                 }
             }
@@ -326,7 +400,17 @@
             }
         }
 
+        function updateEnemyBullets() {
+            for (var i = enemyBullets.length - 1; i >= 0; i--) {
+                enemyBullets[i].y += enemyBullets[i].speed;
+                if (enemyBullets[i].y > canvas.height) {
+                    enemyBullets.splice(i, 1);
+                }
+            }
+        }
+
         function checkCollisions() {
+            // 플레이어 총알과 적 충돌
             for (var i = bullets.length - 1; i >= 0; i--) {
                 for (var j = enemies.length - 1; j >= 0; j--) {
                     if (bullets[i] && enemies[j] &&
@@ -334,16 +418,34 @@
                         bullets[i].x + bullets[i].width > enemies[j].x &&
                         bullets[i].y < enemies[j].y + enemies[j].height &&
                         bullets[i].y + bullets[i].height > enemies[j].y) {
-                        createExplosion(enemies[j].x + enemies[j].width / 2, enemies[j].y + enemies[j].height / 2);
+                        
                         bullets.splice(i, 1);
-                        enemies.splice(j, 1);
-                        score += 10;
+                        
+                        // 강한 적은 체력이 있음
+                        if (enemies[j].type === 'strong') {
+                            enemies[j].health--;
+                            if (enemies[j].health <= 0) {
+                                createExplosion(enemies[j].x + enemies[j].width / 2, enemies[j].y + enemies[j].height / 2);
+                                enemies.splice(j, 1);
+                                score += 20; // 강한 적은 점수 더 높음
+                            } else {
+                                score += 5; // 맞추면 일부 점수
+                            }
+                        } else {
+                            createExplosion(enemies[j].x + enemies[j].width / 2, enemies[j].y + enemies[j].height / 2);
+                            enemies.splice(j, 1);
+                            // 타입별 점수 차등
+                            if (enemies[j].type === 'fast') score += 15;
+                            else if (enemies[j].type === 'shooter') score += 12;
+                            else score += 10;
+                        }
                         updateUI();
                         break;
                     }
                 }
             }
 
+            // 적과 플레이어 충돌
             for (var i = enemies.length - 1; i >= 0; i--) {
                 if (enemies[i].x < player.x + player.width &&
                     enemies[i].x + enemies[i].width > player.x &&
@@ -351,6 +453,22 @@
                     enemies[i].y + enemies[i].height > player.y) {
                     createExplosion(enemies[i].x + enemies[i].width / 2, enemies[i].y + enemies[i].height / 2);
                     enemies.splice(i, 1);
+                    lives--;
+                    updateUI();
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+
+            // 적 총알과 플레이어 충돌
+            for (var i = enemyBullets.length - 1; i >= 0; i--) {
+                if (enemyBullets[i].x < player.x + player.width &&
+                    enemyBullets[i].x + enemyBullets[i].width > player.x &&
+                    enemyBullets[i].y < player.y + player.height &&
+                    enemyBullets[i].y + enemyBullets[i].height > player.y) {
+                    createExplosion(player.x + player.width / 2, player.y + player.height / 2);
+                    enemyBullets.splice(i, 1);
                     lives--;
                     updateUI();
                     if (lives <= 0) {
@@ -391,15 +509,37 @@
 
         function drawEnemies() {
             for (var i = 0; i < enemies.length; i++) {
-                ctx.fillStyle = '#ff4444';
+                var enemy = enemies[i];
+                var color = enemy.color || '#ff4444';
+                
+                ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.arc(enemies[i].x + enemies[i].width / 2, enemies[i].y + enemies[i].height / 2, 
-                        enemies[i].width / 2, 0, Math.PI * 2);
+                ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 
+                        enemy.width / 2, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.fillStyle = '#cc0000';
-                ctx.fillRect(enemies[i].x + 5, enemies[i].y + 15, 10, 5);
-                ctx.fillRect(enemies[i].x + 25, enemies[i].y + 15, 10, 5);
+                // 타입별 표시
+                if (enemy.type === 'strong' && enemy.health === 2) {
+                    // 강한 적은 테두리 표시
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                } else if (enemy.type === 'fast') {
+                    // 빠른 적은 작은 원
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 
+                            enemy.width / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (enemy.type === 'shooter') {
+                    // 사격하는 적은 포신 표시
+                    ctx.fillStyle = '#660000';
+                    ctx.fillRect(enemy.x + enemy.width / 2 - 3, enemy.y + enemy.height - 5, 6, 8);
+                }
+
+                ctx.fillStyle = enemy.type === 'strong' ? '#ffff00' : '#cc0000';
+                ctx.fillRect(enemy.x + 5, enemy.y + 15, 10, 5);
+                ctx.fillRect(enemy.x + enemy.width - 15, enemy.y + 15, 10, 5);
             }
         }
 
@@ -410,6 +550,19 @@
                 ctx.fillRect(particles[i].x, particles[i].y, 3, 3);
             }
             ctx.globalAlpha = 1;
+        }
+
+        function drawEnemyBullets() {
+            ctx.fillStyle = '#ff0000';
+            for (var i = 0; i < enemyBullets.length; i++) {
+                ctx.fillRect(enemyBullets[i].x, enemyBullets[i].y, 
+                           enemyBullets[i].width, enemyBullets[i].height);
+                // 빨간 빛 효과
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.fillRect(enemyBullets[i].x - 2, enemyBullets[i].y - 2, 
+                           enemyBullets[i].width + 4, enemyBullets[i].height + 4);
+                ctx.fillStyle = '#ff0000';
+            }
         }
 
         function updateUI() {
@@ -435,6 +588,7 @@
             updatePlayer();
             updateBullets();
             updateEnemies();
+            updateEnemyBullets();
             updateParticles();
             checkCollisions();
             spawnEnemy();
@@ -442,6 +596,7 @@
             drawPlayer();
             drawBullets();
             drawEnemies();
+            drawEnemyBullets();
             drawParticles();
 
             requestAnimationFrame(gameLoop);
