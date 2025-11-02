@@ -277,6 +277,25 @@
         function endGame() {
             gameState = 'dead';
             
+            // Update best time if needed
+            let isNewRecord = false;
+            if (time > bestTime) {
+                saveBestTime(time);
+                isNewRecord = true;
+            }
+            
+            // Show game over overlay
+            document.getElementById('finalTime').textContent = time.toFixed(2);
+            
+            const recordMessage = document.getElementById('recordMessage');
+            if (isNewRecord) {
+                recordMessage.innerHTML = '<span class="new-record">🎉 새로운 최고 기록!</span>';
+            } else {
+                recordMessage.textContent = '최고 기록: ' + bestTime.toFixed(2) + '초';
+            }
+            
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+            
             // 생존 시간을 점수로 사용하여 결과 페이지로 이동
             const finalScore = Math.floor(time * 100); // 시간을 100배해서 점수화
             goToResultPage('화살피하기', finalScore, 'desktop');
