@@ -409,6 +409,42 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       isMe: r.studentId === studentId
     }));
 
+    // 상위 10% 체크 및 보상 지급
+    let rewardEarned = false;
+    const topPercentile = 100 - parseFloat(percentile); // 상위 몇 %인지 계산
+    
+    console.log(`학생 ${studentId} - 순위: ${myRank}/${totalPlayers}, percentile: ${percentile}%, 상위: ${topPercentile}%`);
+    
+    if (topPercentile <= 10) {
+      console.log(`상위 10% 달성! 보상 지급 시도...`);
+      
+      // 이미 해당 게임에서 보상을 받았는지 체크
+      const existingReward = await Reward.findOne({
+        studentId,
+        title: '까먹는 젤리',
+        description: `${gameName} 상위 10% 달성`
+      });
+
+      console.log('기존 보상 조회 결과:', existingReward);
+
+      if (!existingReward) {
+        // 보상 생성
+        const reward = new Reward({
+          studentId,
+          title: '까먹는 젤리',
+          description: `${gameName} 상위 10% 달성`,
+          claimed: false
+        });
+        await reward.save();
+        rewardEarned = true;
+        console.log('보상 생성 완료!', reward);
+      } else {
+        console.log('이미 해당 게임에서 보상을 받았습니다.');
+      }
+    } else {
+      console.log(`상위 ${topPercentile}% - 보상 조건 미달 (상위 10% 이하만 가능)`);
+    }
+
     res.json({
       success: true,
       currentScore: score,
@@ -416,7 +452,9 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       myRank,
       totalPlayers,
       percentile: parseFloat(percentile),
-      nearbyRankings
+      nearbyRankings,
+      rewardEarned,
+      topPercentile: topPercentile.toFixed(1)
     });
 
   } catch (error) {
@@ -670,6 +708,55 @@ app.get('/games/:folder/:filename', (req, res) => {
       res.status(404).send('해당 게임을 찾을 수 없습니다.');
     }
   });
+});
+
+// 사용자 보상 조회 API
+app.get('/api/rewards/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const rewards = await Reward.find({ studentId })
+      .sort({ earnedAt: -1 })
+      .select('title description claimed earnedAt claimedAt');
+
+    res.json({
+      success: true,
+      rewards
+    });
+  } catch (error) {
+    console.error('보상 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 보상 획득 처리 API (claimed 상태 변경)
+app.put('/api/rewards/:rewardId/claim', async (req, res) => {
+  try {
+    const { rewardId } = req.params;
+
+    const reward = await Reward.findById(rewardId);
+    
+    if (!reward) {
+      return res.status(404).json({ error: '보상을 찾을 수 없습니다.' });
+    }
+
+    if (reward.claimed) {
+      return res.status(400).json({ error: '이미 획득한 보상입니다.' });
+    }
+
+    reward.claimed = true;
+    reward.claimedAt = new Date();
+    await reward.save();
+
+    res.json({
+      success: true,
+      message: '보상을 획득했습니다.',
+      reward
+    });
+  } catch (error) {
+    console.error('보상 획득 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
 });
 
 app.get('/:pageNumber', (req, res) => {
