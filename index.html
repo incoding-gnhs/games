@@ -256,10 +256,34 @@
             border-radius: 6px;
             cursor: pointer;
             transition: background 0.3s;
+            font-size: 0.9rem;
         }
 
         .logout-btn:hover {
             background: #c82333;
+        }
+
+        .rewards-btn {
+            padding: 8px 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .rewards-btn:hover {
+            background: #218838;
+        }
+
+        .user-buttons {
+            display: flex;
+            gap: 10px;
         }
 
         .games-grid {
@@ -338,6 +362,161 @@
             color: #666;
             font-size: 1.1rem;
         }
+
+        /* 보상 모달 스타일 */
+        .rewards-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .rewards-modal.show {
+            display: flex;
+        }
+
+        .rewards-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .rewards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .rewards-header h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .rewards-stats {
+            background: #e8f5e9;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px solid #28a745;
+        }
+
+        .rewards-stats-text {
+            color: #2e7d32;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        .rewards-stats-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .rewards-stats-warning .rewards-stats-text {
+            color: #856404;
+        }
+
+        .close-rewards-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .close-rewards-btn:hover {
+            color: #333;
+        }
+
+        .reward-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #28a745;
+            transition: transform 0.2s;
+        }
+
+        .reward-item:hover {
+            transform: translateX(5px);
+        }
+
+        .reward-item-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .reward-icon {
+            font-size: 2.5rem;
+        }
+
+        .reward-details {
+            flex: 1;
+        }
+
+        .reward-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .reward-description {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .reward-date {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .no-rewards {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .no-rewards-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .no-rewards-text {
+            font-size: 1.1rem;
+        }
+
+        .rewards-loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -390,6 +569,21 @@
         </div>
     </div>
 
+    <!-- 보상 모달 -->
+    <div class="rewards-modal" id="rewardsModal">
+        <div class="rewards-content">
+            <div class="rewards-header">
+                <h2>🍬 내 간식함</h2>
+                <button class="close-rewards-btn" onclick="closeRewardsModal()">×</button>
+            </div>
+            <div id="rewardsListContainer">
+                <div class="rewards-loading">
+                    보상 목록을 불러오는 중...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <h1>🎮 게임 목록</h1>
         
@@ -399,7 +593,12 @@
                 <!-- 학번과 이름을 한 줄로 표시 -->
                 <div class="user-name" id="displayName"></div>
             </div>
-            <button class="logout-btn" id="logoutBtn">로그아웃</button>
+            <div class="user-buttons">
+                <button class="rewards-btn" id="rewardsBtn">
+                    🍬 내 간식함
+                </button>
+                <button class="logout-btn" id="logoutBtn">로그아웃</button>
+            </div>
         </div>
 
         <div class="mobile-message">
@@ -594,6 +793,120 @@
             checkLoginStatus();
             location.reload();
         });
+
+        // 내 간식함 버튼
+        document.getElementById('rewardsBtn').addEventListener('click', async () => {
+            await showRewardsModal();
+        });
+
+        // ==================== 보상 관련 기능 ====================
+        async function showRewardsModal() {
+            const modal = document.getElementById('rewardsModal');
+            const container = document.getElementById('rewardsListContainer');
+            
+            modal.classList.add('show');
+            container.innerHTML = '<div class="rewards-loading">보상 목록을 불러오는 중...</div>';
+
+            const user = getStoredUser();
+            if (!user) {
+                container.innerHTML = '<div class="no-rewards"><div class="no-rewards-icon">😢</div><div class="no-rewards-text">로그인이 필요합니다.</div></div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/rewards/${user.studentId}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '보상 조회에 실패했습니다.');
+                }
+
+                if (data.rewards && data.rewards.length > 0) {
+                    container.innerHTML = '';
+                    
+                    // 보상 통계 표시
+                    if (data.stats) {
+                        const statsDiv = document.createElement('div');
+                        const remaining = data.stats.remaining;
+                        const isLowStock = remaining <= 50;
+                        
+                        statsDiv.className = `rewards-stats${isLowStock ? ' rewards-stats-warning' : ''}`;
+                        statsDiv.innerHTML = `
+                            <div class="rewards-stats-text">
+                                ${isLowStock ? '⚠️ ' : ''}전체 보상: ${data.stats.totalDistributed}/${data.stats.maxRewards} 지급됨 
+                                (남은 개수: ${remaining}개)
+                            </div>
+                        `;
+                        container.appendChild(statsDiv);
+                    }
+                    
+                    data.rewards.forEach(reward => {
+                        const rewardItem = document.createElement('div');
+                        rewardItem.className = 'reward-item';
+                        
+                        const earnedDate = new Date(reward.earnedAt);
+                        const dateString = earnedDate.toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        rewardItem.innerHTML = `
+                            <div class="reward-item-header">
+                                <div class="reward-icon">🍬</div>
+                                <div class="reward-details">
+                                    <div class="reward-title">${reward.title}</div>
+                                    <div class="reward-description">${reward.description}</div>
+                                    <div class="reward-date">획득일: ${dateString}</div>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(rewardItem);
+                    });
+                } else {
+                    container.innerHTML = '';
+                    
+                    // 보상 통계 표시 (보상이 없어도 표시)
+                    if (data.stats) {
+                        const statsDiv = document.createElement('div');
+                        const remaining = data.stats.remaining;
+                        const isLowStock = remaining <= 50;
+                        
+                        statsDiv.className = `rewards-stats${isLowStock ? ' rewards-stats-warning' : ''}`;
+                        statsDiv.innerHTML = `
+                            <div class="rewards-stats-text">
+                                ${isLowStock ? '⚠️ ' : ''}전체 보상: ${data.stats.totalDistributed}/${data.stats.maxRewards} 지급됨 
+                                (남은 개수: ${remaining}개)
+                            </div>
+                        `;
+                        container.appendChild(statsDiv);
+                    }
+                    
+                    const noRewardsDiv = document.createElement('div');
+                    noRewardsDiv.className = 'no-rewards';
+                    noRewardsDiv.innerHTML = `
+                        <div class="no-rewards-icon">🎮</div>
+                        <div class="no-rewards-text">아직 획득한 보상이 없습니다.<br>게임에서 상위 10%를 달성해보세요!</div>
+                    `;
+                    container.appendChild(noRewardsDiv);
+                }
+            } catch (error) {
+                console.error('보상 조회 오류:', error);
+                container.innerHTML = `
+                    <div class="no-rewards">
+                        <div class="no-rewards-icon">❌</div>
+                        <div class="no-rewards-text">보상을 불러오는데 실패했습니다.</div>
+                    </div>
+                `;
+            }
+        }
+
+        function closeRewardsModal() {
+            const modal = document.getElementById('rewardsModal');
+            modal.classList.remove('show');
+        }
 
         // ==================== 게임 목록 관련 기능 ====================
         // 게임 데이터를 저장할 변수

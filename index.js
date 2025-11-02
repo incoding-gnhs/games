@@ -418,28 +418,39 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
     if (topPercentile <= 10) {
       console.log(`상위 10% 달성! 보상 지급 시도...`);
       
-      // 이미 해당 게임에서 보상을 받았는지 체크
-      const existingReward = await Reward.findOne({
-        studentId,
-        title: '까먹는 젤리',
-        description: `${gameName} 상위 10% 달성`
-      });
-
-      console.log('기존 보상 조회 결과:', existingReward);
-
-      if (!existingReward) {
-        // 보상 생성
-        const reward = new Reward({
+      // 전체 보상 개수 체크
+      const totalRewardsCount = await Reward.countDocuments({ title: '까먹는 젤리' });
+      const maxRewards = parseInt(process.env.MAX_JELLY_REWARDS) || 200;
+      
+      console.log(`전체 보상 개수: ${totalRewardsCount}/${maxRewards}`);
+      
+      if (totalRewardsCount >= maxRewards) {
+        console.log('⚠️ 보상 최대 개수에 도달했습니다. 더 이상 보상을 지급할 수 없습니다.');
+      } else {
+        // 이미 해당 게임에서 보상을 받았는지 체크
+        const existingReward = await Reward.findOne({
           studentId,
           title: '까먹는 젤리',
-          description: `${gameName} 상위 10% 달성`,
-          claimed: false
+          description: `${gameName} 상위 10% 달성`
         });
-        await reward.save();
-        rewardEarned = true;
-        console.log('보상 생성 완료!', reward);
-      } else {
-        console.log('이미 해당 게임에서 보상을 받았습니다.');
+
+        console.log('기존 보상 조회 결과:', existingReward);
+
+        if (!existingReward) {
+          // 보상 생성
+          const reward = new Reward({
+            studentId,
+            title: '까먹는 젤리',
+            description: `${gameName} 상위 10% 달성`,
+            claimed: false
+          });
+          await reward.save();
+          rewardEarned = true;
+          console.log('보상 생성 완료!', reward);
+          console.log(`현재 전체 보상 개수: ${totalRewardsCount + 1}/${maxRewards}`);
+        } else {
+          console.log('이미 해당 게임에서 보상을 받았습니다.');
+        }
       }
     } else {
       console.log(`상위 ${topPercentile}% - 보상 조건 미달 (상위 10% 이하만 가능)`);
@@ -719,9 +730,19 @@ app.get('/api/rewards/:studentId', async (req, res) => {
       .sort({ earnedAt: -1 })
       .select('title description claimed earnedAt claimedAt');
 
+    // 전체 보상 개수 및 남은 보상 개수 계산
+    const totalRewardsCount = await Reward.countDocuments({ title: '까먹는 젤리' });
+    const maxRewards = parseInt(process.env.MAX_JELLY_REWARDS) || 200;
+    const remainingRewards = Math.max(0, maxRewards - totalRewardsCount);
+
     res.json({
       success: true,
-      rewards
+      rewards,
+      stats: {
+        totalDistributed: totalRewardsCount,
+        maxRewards,
+        remaining: remainingRewards
+      }
     });
   } catch (error) {
     console.error('보상 조회 오류:', error);
