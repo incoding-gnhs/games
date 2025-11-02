@@ -202,19 +202,21 @@
             background: #545b62;
         }
 
-        /* 로그아웃 버튼 */
+        /* 사용자 정보 박스를 게임 목록 아래에 위치하고, 게임 카드 컨테이너와 동일한 너비로 설정 */
         .user-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            position: relative;
             background: white;
             padding: 15px 20px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             display: none;
             align-items: center;
+            justify-content: space-between;
             gap: 15px;
-            z-index: 100;
+            z-index: 101;
+            margin: 0 auto 20px auto;
+            margin-top: -15px;
+            max-width: 400px;
         }
 
         .user-info.show {
@@ -224,6 +226,21 @@
         .user-info .user-name {
             color: #333;
             font-weight: bold;
+        }
+
+        .user-info .user-id {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .user-info.show {
+            display: flex;
+        }
+
+        .user-info .user-name {
+            color: #333;
+            font-weight: bold;
+            font-size: 20px;
         }
 
         .user-info .user-id {
@@ -373,18 +390,18 @@
         </div>
     </div>
 
-    <!-- 사용자 정보 및 로그아웃 -->
-    <div class="user-info" id="userInfo">
-        <div>
-            <div class="user-name" id="displayName"></div>
-            <div class="user-id" id="displayStudentId"></div>
-        </div>
-        <button class="logout-btn" id="logoutBtn">로그아웃</button>
-    </div>
-
     <div class="container">
         <h1>🎮 게임 목록</h1>
         
+        <!-- 사용자 정보를 게임 목록 아래로 이동 -->
+        <div class="user-info" id="userInfo">
+            <div>
+                <!-- 학번과 이름을 한 줄로 표시 -->
+                <div class="user-name" id="displayName"></div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">로그아웃</button>
+        </div>
+
         <div class="mobile-message">
             <h2>📱 모바일 게임</h2>
             <div id="mobileGamesGrid" class="games-grid" style="display: grid; margin-top: 20px;">
@@ -430,8 +447,7 @@
                 currentUser = user;
                 loginModal.classList.add('hidden');
                 userInfo.classList.add('show');
-                document.getElementById('displayName').textContent = user.name;
-                document.getElementById('displayStudentId').textContent = `학번: ${user.studentId}`;
+                document.getElementById('displayName').textContent = `${user.studentId} ${user.name}`;
                 return true;
             } else {
                 // 비로그인 상태
@@ -579,7 +595,6 @@
             location.reload();
         });
 
-        // ==================== 게임 목록 관련 기능 ====================
         // ==================== 게임 목록 관련 기능 ====================
         // 게임 데이터를 저장할 변수
         let allGames = [];
