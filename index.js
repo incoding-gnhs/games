@@ -371,6 +371,10 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       userMap[user.studentId] = user.name;
     });
 
+    console.log('학생 ID 목록:', studentIds);
+    console.log('조회된 사용자:', users);
+    console.log('사용자 맵:', userMap);
+
     // 현재 학생의 최고 점수
     const myBestScore = await Score.findOne({ gameName, studentId })
       .sort({ score: -1 })
@@ -390,7 +394,7 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
     const nearbyRankings = allRankings.slice(startIndex, endIndex).map((r, idx) => ({
       rank: startIndex + idx + 1,
       studentId: r.studentId,
-      name: userMap[r.studentId] || '알 수 없음',
+      name: userMap[r.studentId] || r.studentId, // 이름이 없으면 학번 표시
       score: r.score,
       isMe: r.studentId === studentId
     }));
