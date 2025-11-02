@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게임 결과</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .user-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .user-id {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .game-name {
+            font-size: 1.2rem;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .score-section {
+            background: #007bff;
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .score-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .best-score {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .rank-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .rank-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .rank-card .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .rank-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .rank-card .unit {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .percentile-card {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .percentile-card .label {
+            color: white;
+            opacity: 0.9;
+        }
+
+        .percentile-card .value {
+            color: white;
+        }
+
+        .percentile-card .unit {
+            color: white;
+            opacity: 0.9;
+        }
+
+        .rankings-section {
+            margin-bottom: 30px;
+        }
+
+        .rankings-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .ranking-list {
+            background: #f8f9fa;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.2s;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-item:hover {
+            background: #f0f0f0;
+        }
+
+        .ranking-item.my-rank {
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .ranking-item.my-rank:hover {
+            background: #0056b3;
+        }
+
+        .rank-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: 50px;
+            text-align: center;
+        }
+
+        .ranking-item.my-rank .rank-number {
+            color: #ffd700;
+        }
+
+        .student-id {
+            flex: 1;
+            font-size: 1rem;
+        }
+
+        .student-name {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .student-number {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .ranking-score {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* 보상 알림 모달 */
+        .reward-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .reward-modal.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .reward-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: bounceIn 0.5s ease-out;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .reward-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: rotate 1s ease-in-out;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .reward-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .reward-message {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .reward-description {
+            font-size: 0.95rem;
+            color: #999;
+            margin-bottom: 25px;
+        }
+
+        .reward-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        .reward-close-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reward-close-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .result-card {
+                padding: 25px;
+            }
+
+            .user-info-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .user-name {
+                font-size: 1.3rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .score-value {
+                font-size: 2.5rem;
+            }
+
+            .rank-section {
+                grid-template-columns: 1fr;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .reward-content {
+                padding: 30px 20px;
+            }
+
+            .reward-icon {
+                font-size: 4rem;
+            }
+
+            .reward-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="result-card">
+            <div id="loadingSection" class="loading">
+                결과를 불러오는 중...
+            </div>
+
+            <div id="errorSection" class="error" style="display: none;">
+                <p id="errorMessage"></p>
+            </div>
+
+            <div id="resultSection" style="display: none;">
+                <!-- 사용자 정보 헤더 -->
+                <div class="user-info-header">
+                    <div class="user-details">
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-id" id="userStudentId"></div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">로그아웃</button>
+                </div>
+
+                <div class="header">
+                    <h1>🎮 게임 결과</h1>
+                    <div class="game-name" id="gameName"></div>
+                </div>
+
+                <div class="score-section">
+                    <div class="score-label">이번 점수</div>
+                    <div class="score-value" id="currentScore">0</div>
+                    <div class="best-score">최고 기록: <span id="bestScore">0</span>점</div>
+                </div>
+
+                <div class="rank-section">
+                    <div class="rank-card">
+                        <div class="label">내 순위</div>
+                        <div class="value">
+                            <span id="myRank">-</span>
+                            <span class="unit">위</span>
+                        </div>
+                    </div>
+                    <div class="rank-card percentile-card">
+                        <div class="label">상위</div>
+                        <div class="value">
+                            <span id="percentile">-</span>
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rankings-section">
+                    <div class="rankings-title">📊 주변 랭킹</div>
+                    <div class="ranking-list" id="rankingList">
+                        <!-- 랭킹 목록이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="playAgain()">다시 하기</button>
+                    <button class="btn btn-secondary" onclick="goHome()">홈으로</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 보상 알림 모달 -->
+    <div id="rewardModal" class="reward-modal">
+        <div class="reward-content">
+            <div class="reward-icon">🍬</div>
+            <div class="reward-title">축하합니다!</div>
+            <div class="reward-message">상위 10% 달성!</div>
+            <div class="reward-badge">까먹는 젤리</div>
+            <div class="reward-description" id="rewardDescription">보상을 획득했습니다!</div>
+            <button class="reward-close-btn" onclick="closeRewardModal()">확인</button>
+        </div>
+    </div>
+
+    <script>
+        // URL 파라미터에서 게임 정보 가져오기
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                gameName: params.get('game'),
+                score: parseInt(params.get('score')),
+                folder: params.get('folder')
+            };
+        }
+
+        // 로컬 스토리지에서 사용자 정보 가져오기
+        function getStoredUser() {
+            const userJson = localStorage.getItem('gameUser');
+            return userJson ? JSON.parse(userJson) : null;
+        }
+
+        // 점수를 천 단위로 쉼표 추가
+        function formatScore(score) {
+            return score.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // 순위에 따른 등수 표시 (1st, 2nd, 3rd, ...)
+        function getRankSuffix(rank) {
+            return rank;
+        }
+
+        // 게임 결과 제출 및 표시
+        async function submitAndShowResult() {
+            const params = getUrlParams();
+            const user = getStoredUser();
+
+            // 유효성 검증
+            if (!params.gameName || isNaN(params.score)) {
+                showError('잘못된 접근입니다. 게임 정보가 없습니다.');
+                return;
+            }
+
+            if (!user) {
+                showError('로그인이 필요합니다.');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+                return;
+            }
+
+            try {
+                // 점수 제출 API 호출
+                const response = await fetch(`/api/games/${encodeURIComponent(params.gameName)}/submit-score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        studentId: user.studentId,
+                        score: params.score
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '점수 제출에 실패했습니다.');
+                }
+
+                // 결과 표시
+                displayResult(params, data);
+
+            } catch (error) {
+                console.error('결과 처리 오류:', error);
+                showError(error.message || '서버와의 연결에 실패했습니다.');
+            }
+        }
+
+        // 결과 표시
+        function displayResult(params, data) {
+            const user = getStoredUser();
+            
+            // 사용자 정보 표시
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userStudentId').textContent = `학번: ${user.studentId}`;
+            }
+
+            // 게임 이름 표시
+            document.getElementById('gameName').textContent = params.gameName;
+
+            // 점수 표시
+            document.getElementById('currentScore').textContent = formatScore(data.currentScore);
+            document.getElementById('bestScore').textContent = formatScore(data.myBestScore);
+
+            // 순위 표시
+            document.getElementById('myRank').textContent = getRankSuffix(data.myRank);
+            
+            // 상위 퍼센트 계산 (100 - percentile로 상위 몇%인지 표시)
+            const topPercentile = (100 - data.percentile).toFixed(1);
+            document.getElementById('percentile').textContent = topPercentile;
+
+            // 주변 랭킹 표시
+            const rankingList = document.getElementById('rankingList');
+            rankingList.innerHTML = '';
+
+            if (data.nearbyRankings && data.nearbyRankings.length > 0) {
+                data.nearbyRankings.forEach(ranking => {
+                    const item = document.createElement('div');
+                    item.className = 'ranking-item' + (ranking.isMe ? ' my-rank' : '');
+                    
+                    // 이름이 있으면 "이름 (학번)", 없으면 "학번"만 표시
+                    const displayName = ranking.name || ranking.studentId;
+                    const hasName = ranking.name && ranking.name !== ranking.studentId;
+                    
+                    item.innerHTML = `
+                        <div class="rank-number">${getRankSuffix(ranking.rank)}</div>
+                        <div class="student-id">
+                            <span class="student-name">${displayName}</span>
+                            ${hasName ? `<span class="student-number">(${ranking.studentId})</span>` : ''}
+                        </div>
+                        <div class="ranking-score">${formatScore(ranking.score)}점</div>
+                    `;
+                    
+                    rankingList.appendChild(item);
+                });
+            } else {
+                rankingList.innerHTML = '<div class="ranking-item" style="justify-content: center;">랭킹 정보가 없습니다.</div>';
+            }
+
+            // 로딩 숨기고 결과 표시
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+
+            // 보상 획득 체크 및 모달 표시
+            if (data.rewardEarned) {
+                showRewardModal(params.gameName);
+            }
+        }
+
+        // 보상 모달 표시
+        function showRewardModal(gameName) {
+            const modal = document.getElementById('rewardModal');
+            const description = document.getElementById('rewardDescription');
+            description.textContent = `${gameName}에서 상위 10% 달성으로 보상을 획득했습니다!`;
+            modal.classList.add('show');
+        }
+
+        // 보상 모달 닫기
+        function closeRewardModal() {
+            const modal = document.getElementById('rewardModal');
+            modal.classList.remove('show');
+        }
+
+        // 에러 표시
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'block';
+        }
+
+        // 다시 하기 버튼
+        function playAgain() {
+            const params = getUrlParams();
+            if (params.folder && params.gameName) {
+                window.location.href = `/games/${params.folder}/${params.gameName}.html`;
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // 홈으로 버튼
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // 로그아웃 버튼
+        function logout() {
+            localStorage.removeItem('gameUser');
+            window.location.href = '/';
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            submitAndShowResult();
+        });
+    </script>
+</body>
+</html>
