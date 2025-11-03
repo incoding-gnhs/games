@@ -533,14 +533,49 @@
     </div>
 
     <script>
-        // URL 파라미터에서 게임 정보 가져오기
+        // URL 파라미터에서 게임 정보 가져오기 (base64 디코딩)
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
-            return {
-                gameName: params.get('game'),
-                score: parseInt(params.get('score')),
-                folder: params.get('folder')
-            };
+            const encodedData = params.get('data');
+            
+            if (!encodedData) {
+                // 레거시 방식 지원 (기존 URL 파라미터)
+                return {
+                    gameName: params.get('game'),
+                    score: parseInt(params.get('score')),
+                    folder: params.get('folder'),
+                    isLegacy: true
+                };
+            }
+            
+            try {
+                // base64 디코딩
+                const decodedStr = decodeURIComponent(atob(encodedData));
+                const data = JSON.parse(decodedStr);
+                
+                // 타임스탬프 검증 (5분 이내만 유효)
+                const currentTime = Date.now();
+                const timeDiff = currentTime - data.timestamp;
+                if (timeDiff > 5 * 60 * 1000) {
+                    throw new Error('만료된 링크입니다.');
+                }
+                
+                // 학번 검증
+                const user = getStoredUser();
+                if (!user || user.studentId !== data.studentId) {
+                    throw new Error('인증 정보가 일치하지 않습니다.');
+                }
+                
+                return {
+                    gameName: data.game,
+                    score: parseInt(data.score),
+                    folder: data.folder,
+                    isLegacy: false
+                };
+            } catch (error) {
+                console.error('URL 파라미터 디코딩 오류:', error);
+                return null;
+            }
         }
 
         // 로컬 스토리지에서 사용자 정보 가져오기
@@ -565,6 +600,11 @@
             const user = getStoredUser();
 
             // 유효성 검증
+            if (!params) {
+                showError('잘못된 접근입니다. 링크가 유효하지 않습니다.');
+                return;
+            }
+            
             if (!params.gameName || isNaN(params.score)) {
                 showError('잘못된 접근입니다. 게임 정보가 없습니다.');
                 return;

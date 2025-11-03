@@ -35,7 +35,17 @@ function goToResultPage(gameName, score, folder = 'all') {
         return;
     }
 
-    window.location.href = `/game-result?game=${encodeURIComponent(gameName)}&score=${score}&folder=${folder}`;
+    // 데이터를 base64로 인코딩하여 URL에 숨김
+    const data = {
+        game: gameName,
+        score: score,
+        folder: folder,
+        studentId: user.studentId,
+        timestamp: Date.now() // 타임스탬프 추가로 보안 강화
+    };
+    
+    const encodedData = btoa(encodeURIComponent(JSON.stringify(data)));
+    window.location.href = `/game-result?data=${encodedData}`;
 }
 
 /**
