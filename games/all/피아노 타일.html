@@ -265,7 +265,6 @@
             </div>
             <div class="level">레벨: <span id="level">1</span></div>
             <div class="speed">속도: <span id="speed">1.0x</span></div>
-            <div class="timer" id="timer" style="display: none;">30</div>
         </div>
         
         <div class="game-area">
@@ -291,7 +290,7 @@
             <p>S, D, K, L 키를 사용하세요</p>
             <p>하트 4개가 모두 사라지면 게임오버!</p>
             <p>레벨 3~5에서는 동시 타일이 나옵니다!</p>
-            <p>레벨 10에서 30초 생존하면 승리!</p>
+            <p>무한히 플레이하며 최고 점수에 도전하세요!</p>
             <p>레벨이 올라갈수록 더 어려워집니다</p>
             <button class="start-btn" onclick="startGame()">게임 시작</button>
         </div>
@@ -314,7 +313,6 @@
             tiles: [],
             nextTileId: 0,
             tilesCleared: 0,
-            totalTiles: 200,
             keysPressed: [false, false, false, false],
             lastSpawnTime: [0, 0, 0, 0], // 각 레인의 마지막 스폰 시간
             patternIndex: 0,
@@ -380,12 +378,9 @@
             gameState.patternIndex = 0;
             gameState.currentPattern = getRandomPattern();
             gameState.hearts = 4;
-            gameState.level10StartTime = null;
-            gameState.level10Timer = null;
             
             updateDisplay();
             updateHearts();
-            document.getElementById('timer').style.display = 'none';
             spawnTile();
             
             gameLoop = setInterval(updateGame, 16);
@@ -393,10 +388,6 @@
         }
 
         function spawnTile() {
-            if (gameState.tilesCleared >= gameState.totalTiles) {
-                return;
-            }
-
             // 현재 패턴이 끝났으면 새 패턴 선택
             if (gameState.patternIndex >= gameState.currentPattern.length) {
                 gameState.currentPattern = getRandomPattern();
@@ -542,13 +533,6 @@
                 }
                 
                 updateDisplay();
-                
-                // 게임 완료 체크
-                if (gameState.tilesCleared >= gameState.totalTiles) {
-                    setTimeout(() => {
-                        gameComplete();
-                    }, 1000);
-                }
             } else {
                 // 잘못된 타일을 눌렀을 때 (순서가 틀림)
                 showMissEffect();
@@ -566,13 +550,6 @@
             gameState.level++;
             gameState.speed = Math.min(3.0, 1.0 + (gameState.level - 1) * 0.2);
             
-            // 레벨 10 도달 시 타이머 시작
-            if (gameState.level === 10 && !gameState.level10StartTime) {
-                gameState.level10StartTime = Date.now();
-                document.getElementById('timer').style.display = 'block';
-                startLevel10Timer();
-            }
-            
             // 새로운 패턴 선택 (레벨에 따라 더블 패턴 포함 여부가 달라짐)
             gameState.currentPattern = getRandomPattern();
             gameState.patternIndex = 0;
@@ -589,19 +566,6 @@
             spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
             
             updateDisplay();
-        }
-
-        function startLevel10Timer() {
-            let timeLeft = 30;
-            gameState.level10Timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').textContent = timeLeft;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(gameState.level10Timer);
-                    victoryComplete();
-                }
-            }, 1000);
         }
 
         function showMissEffect() {
@@ -633,33 +597,6 @@
             gameState.isRunning = false;
             clearInterval(gameLoop);
             clearInterval(spawnLoop);
-            if (gameState.level10Timer) {
-                clearInterval(gameState.level10Timer);
-            }
-            
-            // 결과 페이지로 이동
-            goToResultPage('피아노 타일', gameState.score, 'all');
-        }
-
-        function victoryComplete() {
-            gameState.isRunning = false;
-            clearInterval(gameLoop);
-            clearInterval(spawnLoop);
-            if (gameState.level10Timer) {
-                clearInterval(gameState.level10Timer);
-            }
-            
-            // 결과 페이지로 이동
-            goToResultPage('피아노 타일', gameState.score, 'all');
-        }
-
-        function gameComplete() {
-            gameState.isRunning = false;
-            clearInterval(gameLoop);
-            clearInterval(spawnLoop);
-            if (gameState.level10Timer) {
-                clearInterval(gameState.level10Timer);
-            }
             
             // 결과 페이지로 이동
             goToResultPage('피아노 타일', gameState.score, 'all');
@@ -685,12 +622,10 @@
                 tiles: [],
                 nextTileId: 0,
                 tilesCleared: 0,
-                totalTiles: 200,
                 keysPressed: [false, false, false, false],
                 lastSpawnTime: [0, 0, 0, 0],
                 patternIndex: 0,
-                currentPattern: [],
-                lastSpawnTime: [0, 0, 0, 0]
+                currentPattern: []
             };
             
             updateDisplay();
