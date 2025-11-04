@@ -351,13 +351,17 @@
         ];
 
         function getRandomPattern() {
-            // 레벨 3~5일 때만 더블 패턴 포함
-            if (gameState.level >= 3 && gameState.level <= 5) {
+            // 난이도는 MAX_DIFFICULTY_LEVEL 이후로 더 이상 상승하지 않도록
+            const MAX_DIFFICULTY_LEVEL = 11;
+            const effectiveLevel = Math.min(gameState.level, MAX_DIFFICULTY_LEVEL);
+
+            // 레벨 3~5(효과적 레벨 범위)일 때만 더블 패턴 포함
+            if (effectiveLevel >= 3 && effectiveLevel <= 5) {
                 const allPatterns = [...singlePatterns, ...doublePatterns];
                 const patternIndex = Math.floor(Math.random() * allPatterns.length);
                 return [...allPatterns[patternIndex]];
             } else {
-                // 레벨 1-2, 6+ 에서는 싱글 패턴만
+                // 그 외에는 싱글 패턴만
                 const patternIndex = Math.floor(Math.random() * singlePatterns.length);
                 return [...singlePatterns[patternIndex]];
             }
@@ -547,23 +551,29 @@
         }
 
         function levelUp() {
+            // 레벨 수치는 계속 증가시키되
+            // 난이도(속도, 스폰 간격)는 레벨 11을 초과하면 11레벨에서의 값으로 고정합니다.
             gameState.level++;
-            // 레벨 증가에 따라 속도와 스폰 간격이 계속 증가/감소하도록 변경
-            // (기존에는 속도에 상한을 두어 레벨 11에서 더 이상 어려워지지 않았음)
-            gameState.speed = 1.0 + (gameState.level - 1) * 0.2; // 제한 없음
+
+            const effectiveLevel = Math.min(gameState.level, 11); // 난이도 계산에만 사용
+
+            // 속도는 여전히 기존 로직대로 최대 3.0으로 캡
+            gameState.speed = Math.min(3.0, 1.0 + (effectiveLevel - 1) * 0.2);
 
             // 새로운 패턴 선택 (레벨에 따라 더블 패턴 포함 여부가 달라짐)
             gameState.currentPattern = getRandomPattern();
             gameState.patternIndex = 0;
 
-            // 스폰 간격 조정: 레벨이 올라갈수록 간격을 줄여 난이도 증가
+            // 스폰 간격 조정 (레벨 6 이상에서는 속도 증가 완화)
             clearInterval(spawnLoop);
-            // 기본 스폰 베이스(밀리초). 레벨 1에서는 600ms.
-            // 레벨마다 20~30ms 정도씩 빠르게 하되, 과도한 빠름을 막기 위한 하한을 둠
-            const base = 600;
-            const decrementPerLevel = 25; // 레벨당 감소값
-            const minSpawnRate = 120; // 스폰 간격 하한 (ms)
-            const newSpawnRate = Math.max(minSpawnRate, base - (gameState.level - 1) * decrementPerLevel);
+            let newSpawnRate;
+            if (effectiveLevel <= 5) {
+                newSpawnRate = Math.max(300, 600 - (effectiveLevel - 1) * 40);
+            } else {
+                // 레벨 6 이상: 더 느린 속도 증가. effectiveLevel 사용으로
+                // 레벨 11을 초과해도 스폰 간격은 11레벨 기준으로 고정됩니다.
+                newSpawnRate = Math.max(400, 600 - 5 * 40 - (effectiveLevel - 6) * 20);
+            }
             spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
 
             updateDisplay();
@@ -596,24 +606,29 @@
 
         function gameOver() {
             gameState.isRunning = false;
-            clearInterval(gameLoop);
-            clearInterval(spawnLoop);
-            
-            // 결과 페이지로 이동
-            goToResultPage('피아노 타일', gameState.score, 'all');
-        }
+            // 난이도는 MAX_DIFFICULTY_LEVEL 이후로 더 이상 올라가지 않음
+            const MAX_DIFFICULTY_LEVEL = 11;
+            const effectiveLevel = Math.min(gameState.level, MAX_DIFFICULTY_LEVEL);
 
-        function restartGame() {
-            // 화면 초기화
-            document.getElementById('gameOver').style.display = 'none';
-            document.getElementById('gameOver').querySelector('h2').textContent = '게임 오버!';
-            document.getElementById('instructions').style.display = 'block';
-            
-            // 타일 제거
-            lanes.forEach(lane => {
-                lane.innerHTML = '';
-            });
-            
+            // 속도는 효과적 레벨을 기반으로 계산하여 MAX값을 제한
+            gameState.speed = Math.min(3.0, 1.0 + (effectiveLevel - 1) * 0.2);
+
+            // 새로운 패턴 선택 (getRandomPattern 내부에서 effectiveLevel을 사용함)
+            gameState.currentPattern = getRandomPattern();
+            gameState.patternIndex = 0;
+
+            // 스폰 간격 조정 (효과적 레벨을 사용해서 11레벨 이후 성장 중지)
+            clearInterval(spawnLoop);
+            let newSpawnRate;
+            if (effectiveLevel <= 5) {
+                newSpawnRate = Math.max(300, 600 - (effectiveLevel - 1) * 40);
+            } else {
+                // 레벨 6~11: 더 느린 속도 증가; 그 이후는 effectiveLevel로 고정되어 변화 없음
+                newSpawnRate = Math.max(400, 600 - 5 * 40 - (effectiveLevel - 6) * 20);
+            }
+            spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
+
+            updateDisplay();
             // 상태 초기화
             gameState = {
                 isRunning: false,
