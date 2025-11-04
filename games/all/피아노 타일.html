@@ -265,6 +265,7 @@
             </div>
             <div class="level">레벨: <span id="level">1</span></div>
             <div class="speed">속도: <span id="speed">1.0x</span></div>
+            <div class="timer" id="timer" style="display: none;">30</div>
         </div>
         
         <div class="game-area">
@@ -290,7 +291,7 @@
             <p>S, D, K, L 키를 사용하세요</p>
             <p>하트 4개가 모두 사라지면 게임오버!</p>
             <p>레벨 3~5에서는 동시 타일이 나옵니다!</p>
-            <p>무한히 플레이하며 최고 점수에 도전하세요!</p>
+            <p>타이머 없이 무한히 플레이하세요!</p>
             <p>레벨이 올라갈수록 더 어려워집니다</p>
             <button class="start-btn" onclick="startGame()">게임 시작</button>
         </div>
@@ -313,6 +314,7 @@
             tiles: [],
             nextTileId: 0,
             tilesCleared: 0,
+            totalTiles: Infinity,
             keysPressed: [false, false, false, false],
             lastSpawnTime: [0, 0, 0, 0], // 각 레인의 마지막 스폰 시간
             patternIndex: 0,
@@ -351,17 +353,13 @@
         ];
 
         function getRandomPattern() {
-            // 난이도는 MAX_DIFFICULTY_LEVEL 이후로 더 이상 상승하지 않도록
-            const MAX_DIFFICULTY_LEVEL = 11;
-            const effectiveLevel = Math.min(gameState.level, MAX_DIFFICULTY_LEVEL);
-
-            // 레벨 3~5(효과적 레벨 범위)일 때만 더블 패턴 포함
-            if (effectiveLevel >= 3 && effectiveLevel <= 5) {
+            // 레벨 3~5일 때만 더블 패턴 포함
+            if (gameState.level >= 3 && gameState.level <= 5) {
                 const allPatterns = [...singlePatterns, ...doublePatterns];
                 const patternIndex = Math.floor(Math.random() * allPatterns.length);
                 return [...allPatterns[patternIndex]];
             } else {
-                // 그 외에는 싱글 패턴만
+                // 레벨 1-2, 6+ 에서는 싱글 패턴만
                 const patternIndex = Math.floor(Math.random() * singlePatterns.length);
                 return [...singlePatterns[patternIndex]];
             }
@@ -382,9 +380,12 @@
             gameState.patternIndex = 0;
             gameState.currentPattern = getRandomPattern();
             gameState.hearts = 4;
+            gameState.level10StartTime = null;
+            gameState.level10Timer = null;
             
             updateDisplay();
             updateHearts();
+            document.getElementById('timer').style.display = 'none';
             spawnTile();
             
             gameLoop = setInterval(updateGame, 16);
@@ -392,6 +393,10 @@
         }
 
         function spawnTile() {
+            if (gameState.tilesCleared >= gameState.totalTiles) {
+                return;
+            }
+
             // 현재 패턴이 끝났으면 새 패턴 선택
             if (gameState.patternIndex >= gameState.currentPattern.length) {
                 gameState.currentPattern = getRandomPattern();
@@ -537,6 +542,13 @@
                 }
                 
                 updateDisplay();
+                
+                // 게임 완료 체크
+                if (gameState.tilesCleared >= gameState.totalTiles) {
+                    setTimeout(() => {
+                        gameComplete();
+                    }, 1000);
+                }
             } else {
                 // 잘못된 타일을 눌렀을 때 (순서가 틀림)
                 showMissEffect();
@@ -551,33 +563,30 @@
         }
 
         function levelUp() {
-            // 레벨 수치는 계속 증가시키되
-            // 난이도(속도, 스폰 간격)는 레벨 11을 초과하면 11레벨에서의 값으로 고정합니다.
             gameState.level++;
-
-            const effectiveLevel = Math.min(gameState.level, 11); // 난이도 계산에만 사용
-
-            // 속도는 여전히 기존 로직대로 최대 3.0으로 캡
-            gameState.speed = Math.min(3.0, 1.0 + (effectiveLevel - 1) * 0.2);
-
+            gameState.speed = Math.min(3.0, 1.0 + (gameState.level - 1) * 0.2);
+            
+            // 이제 레벨 제한/레벨10 타이머가 없습니다. 게임은 무한히 이어집니다.
+            
             // 새로운 패턴 선택 (레벨에 따라 더블 패턴 포함 여부가 달라짐)
             gameState.currentPattern = getRandomPattern();
             gameState.patternIndex = 0;
-
+            
             // 스폰 간격 조정 (레벨 6 이상에서는 속도 증가 완화)
             clearInterval(spawnLoop);
             let newSpawnRate;
-            if (effectiveLevel <= 5) {
-                newSpawnRate = Math.max(300, 600 - (effectiveLevel - 1) * 40);
+            if (gameState.level <= 5) {
+                newSpawnRate = Math.max(300, 600 - (gameState.level - 1) * 40);
             } else {
-                // 레벨 6 이상: 더 느린 속도 증가. effectiveLevel 사용으로
-                // 레벨 11을 초과해도 스폰 간격은 11레벨 기준으로 고정됩니다.
-                newSpawnRate = Math.max(400, 600 - 5 * 40 - (effectiveLevel - 6) * 20);
+                // 레벨 6 이상: 더 느린 속도 증가
+                newSpawnRate = Math.max(400, 600 - 5 * 40 - (gameState.level - 6) * 20);
             }
             spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
-
+            
             updateDisplay();
         }
+
+        // 레벨10 타이머 기능은 제거되어 더 이상 사용되지 않습니다.
 
         function showMissEffect() {
             const missEffect = document.getElementById('missEffect');
@@ -606,29 +615,51 @@
 
         function gameOver() {
             gameState.isRunning = false;
-            // 난이도는 MAX_DIFFICULTY_LEVEL 이후로 더 이상 올라가지 않음
-            const MAX_DIFFICULTY_LEVEL = 11;
-            const effectiveLevel = Math.min(gameState.level, MAX_DIFFICULTY_LEVEL);
-
-            // 속도는 효과적 레벨을 기반으로 계산하여 MAX값을 제한
-            gameState.speed = Math.min(3.0, 1.0 + (effectiveLevel - 1) * 0.2);
-
-            // 새로운 패턴 선택 (getRandomPattern 내부에서 effectiveLevel을 사용함)
-            gameState.currentPattern = getRandomPattern();
-            gameState.patternIndex = 0;
-
-            // 스폰 간격 조정 (효과적 레벨을 사용해서 11레벨 이후 성장 중지)
+            clearInterval(gameLoop);
             clearInterval(spawnLoop);
-            let newSpawnRate;
-            if (effectiveLevel <= 5) {
-                newSpawnRate = Math.max(300, 600 - (effectiveLevel - 1) * 40);
-            } else {
-                // 레벨 6~11: 더 느린 속도 증가; 그 이후는 effectiveLevel로 고정되어 변화 없음
-                newSpawnRate = Math.max(400, 600 - 5 * 40 - (effectiveLevel - 6) * 20);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
             }
-            spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
+            
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
+        }
 
-            updateDisplay();
+        function victoryComplete() {
+            gameState.isRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(spawnLoop);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
+            }
+            
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
+        }
+
+        function gameComplete() {
+            gameState.isRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(spawnLoop);
+            if (gameState.level10Timer) {
+                clearInterval(gameState.level10Timer);
+            }
+            
+            // 결과 페이지로 이동
+            goToResultPage('피아노 타일', gameState.score, 'all');
+        }
+
+        function restartGame() {
+            // 화면 초기화
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameOver').querySelector('h2').textContent = '게임 오버!';
+            document.getElementById('instructions').style.display = 'block';
+            
+            // 타일 제거
+            lanes.forEach(lane => {
+                lane.innerHTML = '';
+            });
+            
             // 상태 초기화
             gameState = {
                 isRunning: false,
@@ -638,10 +669,12 @@
                 tiles: [],
                 nextTileId: 0,
                 tilesCleared: 0,
+                totalTiles: Infinity,
                 keysPressed: [false, false, false, false],
                 lastSpawnTime: [0, 0, 0, 0],
                 patternIndex: 0,
-                currentPattern: []
+                currentPattern: [],
+                lastSpawnTime: [0, 0, 0, 0]
             };
             
             updateDisplay();
