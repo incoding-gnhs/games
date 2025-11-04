@@ -548,23 +548,24 @@
 
         function levelUp() {
             gameState.level++;
-            gameState.speed = Math.min(3.0, 1.0 + (gameState.level - 1) * 0.2);
-            
+            // 레벨 증가에 따라 속도와 스폰 간격이 계속 증가/감소하도록 변경
+            // (기존에는 속도에 상한을 두어 레벨 11에서 더 이상 어려워지지 않았음)
+            gameState.speed = 1.0 + (gameState.level - 1) * 0.2; // 제한 없음
+
             // 새로운 패턴 선택 (레벨에 따라 더블 패턴 포함 여부가 달라짐)
             gameState.currentPattern = getRandomPattern();
             gameState.patternIndex = 0;
-            
-            // 스폰 간격 조정 (레벨 6 이상에서는 속도 증가 완화)
+
+            // 스폰 간격 조정: 레벨이 올라갈수록 간격을 줄여 난이도 증가
             clearInterval(spawnLoop);
-            let newSpawnRate;
-            if (gameState.level <= 5) {
-                newSpawnRate = Math.max(300, 600 - (gameState.level - 1) * 40);
-            } else {
-                // 레벨 6 이상: 더 느린 속도 증가
-                newSpawnRate = Math.max(400, 600 - 5 * 40 - (gameState.level - 6) * 20);
-            }
+            // 기본 스폰 베이스(밀리초). 레벨 1에서는 600ms.
+            // 레벨마다 20~30ms 정도씩 빠르게 하되, 과도한 빠름을 막기 위한 하한을 둠
+            const base = 600;
+            const decrementPerLevel = 25; // 레벨당 감소값
+            const minSpawnRate = 120; // 스폰 간격 하한 (ms)
+            const newSpawnRate = Math.max(minSpawnRate, base - (gameState.level - 1) * decrementPerLevel);
             spawnLoop = setInterval(spawnTile, newSpawnRate / gameState.speed);
-            
+
             updateDisplay();
         }
 
