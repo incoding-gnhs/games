@@ -214,9 +214,10 @@
             justify-content: space-between;
             gap: 15px;
             z-index: 101;
-            margin: 0 auto 20px auto;
-            margin-top: -15px;
-            max-width: 400px;
+            margin-bottom: 20px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .user-info.show {
@@ -284,6 +285,116 @@
         .user-buttons {
             display: flex;
             gap: 10px;
+        }
+
+        .qr-btn {
+            padding: 8px 15px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .qr-btn:hover {
+            background: #138496;
+        }
+
+        /* QR 코드 모달 스타일 */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .qr-modal.show {
+            display: flex;
+        }
+
+        .qr-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .qr-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .qr-modal-header h2 {
+            font-size: 1.5rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .close-qr-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .close-qr-btn:hover {
+            color: #333;
+        }
+
+        .qr-modal-content img {
+            width: 250px;
+            height: 250px;
+            border: 3px solid #17a2b8;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .qr-modal-content p {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* QR 섹션 제거 */
+        .qr-section {
+            display: none;
+        }
+
+        /* 사용자 정보와 QR을 나란히 배치하는 컨테이너 */
+        .info-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .info-container.show {
+            display: block;
         }
 
         .games-grid {
@@ -589,20 +700,38 @@
         </div>
     </div>
 
+    <!-- QR 코드 모달 -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-modal-content">
+            <div class="qr-modal-header">
+                <h2>📱 모바일로 접속하기</h2>
+                <button class="close-qr-btn" onclick="closeQrModal()">×</button>
+            </div>
+            <img src="/qr.png" alt="모바일 접속 QR코드">
+            <p>QR 코드를 스캔하여<br>모바일에서 접속하세요!</p>
+        </div>
+    </div>
+
     <div class="container">
+        <h2 style="text-align: center; letter-spacing: 0.05em;">🏫광남고등학교 코딩 동아리「인코딩」</h2>
         <h1>🎮 게임 목록</h1>
         
-        <!-- 사용자 정보를 게임 목록 아래로 이동 -->
-        <div class="user-info" id="userInfo">
-            <div>
-                <!-- 학번과 이름을 한 줄로 표시 -->
-                <div class="user-name" id="displayName"></div>
-            </div>
-            <div class="user-buttons">
-                <button class="rewards-btn" id="rewardsBtn">
-                    🍬 내 간식함
-                </button>
-                <button class="logout-btn" id="logoutBtn">로그아웃</button>
+        <!-- 사용자 정보와 QR을 나란히 배치 -->
+        <div class="info-container" id="infoContainer">
+            <div class="user-info" id="userInfo">
+                <div>
+                    <!-- 학번과 이름을 한 줄로 표시 -->
+                    <div class="user-name" id="displayName"></div>
+                </div>
+                <div class="user-buttons">
+                    <button class="qr-btn" id="qrBtn">
+                        📱 모바일 접속 QR
+                    </button>
+                    <button class="rewards-btn" id="rewardsBtn">
+                        🍬 내 간식함
+                    </button>
+                    <button class="logout-btn" id="logoutBtn">로그아웃</button>
+                </div>
             </div>
         </div>
 
@@ -644,18 +773,21 @@
         function checkLoginStatus() {
             const user = getStoredUser();
             const loginModal = document.getElementById('loginModal');
+            const infoContainer = document.getElementById('infoContainer');
             const userInfo = document.getElementById('userInfo');
             
             if (user) {
                 // 로그인 상태
                 currentUser = user;
                 loginModal.classList.add('hidden');
+                infoContainer.classList.add('show');
                 userInfo.classList.add('show');
                 document.getElementById('displayName').textContent = `${user.studentId} ${user.name}`;
                 return true;
             } else {
                 // 비로그인 상태
                 loginModal.classList.remove('hidden');
+                infoContainer.classList.remove('show');
                 userInfo.classList.remove('show');
                 return false;
             }
@@ -803,6 +935,22 @@
         document.getElementById('rewardsBtn').addEventListener('click', async () => {
             await showRewardsModal();
         });
+
+        // QR 코드 버튼
+        document.getElementById('qrBtn').addEventListener('click', () => {
+            showQrModal();
+        });
+
+        // ==================== QR 코드 모달 기능 ====================
+        function showQrModal() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.add('show');
+        }
+
+        function closeQrModal() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.remove('show');
+        }
 
         // ==================== 보상 관련 기능 ====================
         async function showRewardsModal() {
