@@ -312,7 +312,6 @@
             tiles: [],
             nextTileId: 0,
             tilesCleared: 0,
-            totalTiles: 200,
             keysPressed: [false, false, false, false],
             lastSpawnTime: [0, 0, 0, 0], // 각 레인의 마지막 스폰 시간
             patternIndex: 0,
@@ -388,10 +387,6 @@
         }
 
         function spawnTile() {
-            if (gameState.tilesCleared >= gameState.totalTiles) {
-                return;
-            }
-
             // 현재 패턴이 끝났으면 새 패턴 선택
             if (gameState.patternIndex >= gameState.currentPattern.length) {
                 gameState.currentPattern = getRandomPattern();
@@ -537,13 +532,6 @@
                 }
                 
                 updateDisplay();
-                
-                // 게임 완료 체크
-                if (gameState.tilesCleared >= gameState.totalTiles) {
-                    setTimeout(() => {
-                        gameComplete();
-                    }, 1000);
-                }
             } else {
                 // 잘못된 타일을 눌렀을 때 (순서가 틀림)
                 showMissEffect();
@@ -613,15 +601,6 @@
             goToResultPage('피아노 타일', gameState.score, 'all');
         }
 
-        function gameComplete() {
-            gameState.isRunning = false;
-            clearInterval(gameLoop);
-            clearInterval(spawnLoop);
-            
-            // 결과 페이지로 이동
-            goToResultPage('피아노 타일', gameState.score, 'all');
-        }
-
         function restartGame() {
             // 화면 초기화
             document.getElementById('gameOver').style.display = 'none';
@@ -642,12 +621,10 @@
                 tiles: [],
                 nextTileId: 0,
                 tilesCleared: 0,
-                totalTiles: 200,
                 keysPressed: [false, false, false, false],
                 lastSpawnTime: [0, 0, 0, 0],
                 patternIndex: 0,
-                currentPattern: [],
-                lastSpawnTime: [0, 0, 0, 0]
+                currentPattern: []
             };
             
             updateDisplay();
