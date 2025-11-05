@@ -426,10 +426,15 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
 
     const myScore = myBestScore ? myBestScore.score : score;
 
-    // 내 순위 찾기
+    // 내 순위 찾기 (최고 점수 기준)
     const myRank = allRankings.findIndex(r => r.studentId === studentId) + 1;
     const totalPlayers = allRankings.length;
     const percentile = totalPlayers > 0 ? ((totalPlayers - myRank + 1) / totalPlayers * 100).toFixed(1) : 100;
+
+    // 현재 점수에 대한 순위 계산 (현재 점수가 전체에서 어느 위치인지)
+    const currentScoreRank = allRankings.filter(r => r.score > score).length + 1;
+    const currentScorePercentile = totalPlayers > 0 ? ((totalPlayers - currentScoreRank + 1) / totalPlayers * 100).toFixed(1) : 100;
+    const currentScoreTopPercentile = (100 - parseFloat(currentScorePercentile)).toFixed(1);
 
     // 내 앞뒤 3명씩 (총 7명)
     const myIndex = myRank - 1;
@@ -542,7 +547,8 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       nearbyRankings,
       rewardEarned,
       firstGameReward,
-      topPercentile: topPercentile.toFixed(1)
+      topPercentile: topPercentile.toFixed(1),
+      currentScoreTopPercentile: parseFloat(currentScoreTopPercentile) // 현재 점수에 대한 상위 퍼센트
     });
 
   } catch (error) {

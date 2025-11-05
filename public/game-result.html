@@ -484,7 +484,10 @@
 
                 <div class="score-section">
                     <div class="score-label">이번 점수</div>
-                    <div class="score-value" id="currentScore">0</div>
+                    <div class="score-value">
+                        <span id="currentScore">0</span>
+                        <span style="font-size: 1.2rem; opacity: 0.8;"> / 상위 <span id="currentScorePercentile">-</span>%</span>
+                    </div>
                     <div class="best-score">최고 기록: <span id="bestScore">0</span>점</div>
                 </div>
 
@@ -674,6 +677,11 @@
             // 점수 표시
             document.getElementById('currentScore').textContent = formatScore(data.currentScore);
             document.getElementById('bestScore').textContent = formatScore(data.myBestScore);
+            
+            // 현재 점수의 상위 퍼센트 표시
+            if (data.currentScoreTopPercentile !== undefined) {
+                document.getElementById('currentScorePercentile').textContent = data.currentScoreTopPercentile.toFixed(1);
+            }
 
             // 순위 표시
             document.getElementById('myRank').textContent = getRankSuffix(data.myRank);
