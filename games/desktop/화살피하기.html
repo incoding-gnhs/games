@@ -326,14 +326,19 @@
 
             // Spawn arrows
             for (let i = 0; i < arrowCount; i++) {
+                // availableLanes가 비어있으면 모든 레인에서 다시 선택 (이미 사용한 레인 제외)
+                if (availableLanes.length === 0) {
+                    availableLanes = [0, 1, 2, 3, 4].filter(lane => !currentWaveLanes.includes(lane));
+                    // 모든 레인을 다 사용했다면 처음부터 다시 시작
+                    if (availableLanes.length === 0) {
+                        availableLanes = [0, 1, 2, 3, 4];
+                    }
+                }
+
                 const randomIndex = Math.floor(Math.random() * availableLanes.length);
                 const selectedLane = availableLanes[randomIndex];
                 currentWaveLanes.push(selectedLane);
                 availableLanes.splice(randomIndex, 1);
-
-                if (availableLanes.length === 0) {
-                    availableLanes = [0, 1, 2, 3, 4].filter(lane => !currentWaveLanes.includes(lane));
-                }
 
                 const arrow = {
                     x: CANVAS_WIDTH + 50 + (i * 60),
