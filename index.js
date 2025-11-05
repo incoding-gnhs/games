@@ -976,6 +976,38 @@ app.get('/claime', (req, res) => {
       res.status(404).send('페이지를 찾을 수 없습니다.');
     }
   });
+});// 로그 API - Score 데이터를 최근순으로 가져오기 (limit 10)
+app.get('/api/logs', async (req, res) => {
+  try {
+    // Score 데이터를 최근순으로 10개만 가져오기
+    const scores = await Score.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+    
+    // 각 Score에 대한 User 정보 가져오기
+    const logsWithUserInfo = await Promise.all(
+      scores.map(async (score) => {
+        const user = await User.findOne({ studentId: score.studentId }).lean();
+        return {
+          ...score,
+          userName: user ? user.name : '알 수 없음'
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      logs: logsWithUserInfo,
+      count: logsWithUserInfo.length
+    });
+  } catch (error) {
+    console.error('로그 조회 오류:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '로그를 불러오는 중 오류가 발생했습니다.' 
+    });
+  }
 });
 
 app.get('/:pageNumber', (req, res) => {
