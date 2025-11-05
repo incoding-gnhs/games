@@ -252,13 +252,6 @@
         .instructions strong {
             color: #667eea;
         }
-
-        .difficulty-indicator {
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -269,10 +262,10 @@
         <div id="startScreen">
             <div class="instructions">
                 <strong>게임 방법:</strong><br>
-                • 마이크에 대고 큰 소리를 내세요!<br>
-                • 소리가 클수록 유리잔에 금이 빨리 갑니다<br>
-                • 빠르게 깨뜨릴수록 높은 점수!<br>
-                • 시간이 지날수록 더 큰 소리가 필요합니다
+                • 마이크에 대고 매우 큰 소리를 내세요!<br>
+                • 일정 수준(60%) 이상의 소리만 데미지를 줍니다<br>
+                • 유리잔이 100% 깨지면 게임이 종료됩니다<br>
+                • 빠르게 깨뜨릴수록 높은 점수!
             </div>
             <button class="button start-button" ontouchstart="startGame()" onclick="startGame()">게임 시작</button>
         </div>
@@ -302,12 +295,11 @@
                 </div>
                 <div class="volume-bar">
                     <div class="volume-fill" id="volumeFill"></div>
-                    <div class="threshold-marker"></div>
+                    <div class="threshold-marker" style="right: 40%;"></div>
                 </div>
             </div>
 
             <div class="warning" id="warning"></div>
-            <div class="difficulty-indicator" id="difficultyIndicator">난이도: 쉬움</div>
         </div>
 
         <div id="gameOverScreen" class="hidden">
@@ -337,8 +329,7 @@
         let damageLevel = 0;
         let animationFrame;
         let crackLines = [];
-        let noiseThreshold = 30; //  Starting threshold for noise detection
-        let difficultyMultiplier = 1;
+        let noiseThreshold = 60; // 데미지를 주기 위한 최소 소음 레벨 (더 어렵게)
 
         async function startGame() {
             // 로그인 확인
@@ -381,25 +372,13 @@
             const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
             const volume = Math.min(100, (average / 128) * 100);
             
-            //  Increase difficulty over time - require louder sounds
-            const elapsedSeconds = (Date.now() - startTime) / 1000;
-            difficultyMultiplier = 2 + (elapsedSeconds / 60); // Increases by 1 every minute
-            const adjustedThreshold = noiseThreshold * difficultyMultiplier;
-            
-            // Update difficulty indicator
-            let difficultyText = '쉬움';
-            if (difficultyMultiplier > 2.5) difficultyText = '매우 어려움';
-            else if (difficultyMultiplier > 2) difficultyText = '어려움';
-            else if (difficultyMultiplier > 1.5) difficultyText = '보통';
-            document.getElementById('difficultyIndicator').textContent = 
-                `난이도: ${difficultyText} (필요 소음: ${Math.round(adjustedThreshold)}%)`;
-            
             document.getElementById('volumeFill').style.width = volume + '%';
             document.getElementById('volumePercent').textContent = Math.round(volume) + '%';
             
-            //  Damage increases when volume is HIGH (above threshold)
-            if (volume > adjustedThreshold) {
-                const damageIncrease = (volume - adjustedThreshold) / 10;
+            // 일정 수준 이상의 소리만 데미지를 줌
+            if (volume > noiseThreshold) {
+                // 데미지 증가량을 더욱 줄여서 오래 걸리도록 만들기
+                const damageIncrease = (volume - noiseThreshold) / 40; // /20에서 /40으로 변경 (2배 더 오래 걸림)
                 damageLevel = Math.min(100, damageLevel + damageIncrease);
                 
                 document.getElementById('glass').classList.add('shaking');
@@ -413,11 +392,11 @@
                 
                 document.getElementById('warning').textContent = '💥 깨지는 중...';
             } else {
-                //  Show encouragement to make noise
-                if (volume < adjustedThreshold / 2) {
-                    document.getElementById('warning').textContent = '🔊 더 큰 소리를 내세요!';
+                // 일정 수준 이하는 데미지 0
+                if (volume < noiseThreshold * 0.8) {
+                    document.getElementById('warning').textContent = '🔊 훨씬 더 큰 소리를 내세요!';
                 } else {
-                    document.getElementById('warning').textContent = '조금만 더!';
+                    document.getElementById('warning').textContent = '거의 다 왔어요! 더 크게!';
                 }
             }
             
@@ -457,12 +436,9 @@
             gameActive = false;
             cancelAnimationFrame(animationFrame);
             
-            //  Calculate score based on speed - faster = higher score
+            // Calculate score based on speed
             const elapsedSeconds = (Date.now() - startTime) / 1000;
-            // Base score of 10000, minus time penalty, plus difficulty bonus
-            const timeScore = Math.max(0, 10000 - (elapsedSeconds * 100));
-            const difficultyBonus = (difficultyMultiplier - 1) * 1000;
-            const finalScore = Math.round(timeScore + difficultyBonus);
+            const finalScore = Math.max(0, Math.round(10000 - (elapsedSeconds * 100)));
             
             createShatterEffect();
             
@@ -517,7 +493,6 @@
             
             damageLevel = 0;
             crackLines = [];
-            difficultyMultiplier = 1;
         }
     </script>
 

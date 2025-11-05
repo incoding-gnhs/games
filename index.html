@@ -576,6 +576,11 @@
                 <h2>🍬 내 간식함</h2>
                 <button class="close-rewards-btn" onclick="closeRewardsModal()">×</button>
             </div>
+            <div style="background: #e3f2fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; text-align: center; border: 2px solid #2196f3;">
+                <div style="color: #1565c0; font-size: 0.95rem; font-weight: bold;">
+                    📍 간식 수령은 6~7교시 동안 4층 AI융합실에서 가능합니다.
+                </div>
+            </div>
             <div id="rewardsListContainer">
                 <div class="rewards-loading">
                     보상 목록을 불러오는 중...
@@ -833,7 +838,7 @@
                         statsDiv.className = `rewards-stats${isLowStock ? ' rewards-stats-warning' : ''}`;
                         statsDiv.innerHTML = `
                             <div class="rewards-stats-text">
-                                ${isLowStock ? '⚠️ ' : ''}전체 보상: ${data.stats.totalDistributed}/${data.stats.maxRewards} 지급됨 
+                                ${isLowStock ? '⚠️ ' : ''}까먹는 젤리: ${data.stats.totalDistributed}/${data.stats.maxRewards} 지급됨 
                                 (남은 개수: ${remaining}개)
                             </div>
                         `;

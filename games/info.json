@@ -51,6 +51,11 @@
       "title": "서브웨이 러너",
       "description": "지하철 러너 게임입니다.",
       "author": "20725 장호연"
+    },
+    {
+      "title": "듀얼 스네이크 게임",
+      "description": "2인용 스네이크 게임입니다.",
+      "author": "11017 송재민"
     }
   ],
   "mobile": [
@@ -58,25 +63,21 @@
       "title": "스네이크",
       "description": "모바일용 스네이크 게임입니다.",
       "author": "20601 강권"
-    }
-  ],
-  "etc": [
-    {
-      "title": "듀얼 스네이크 게임",
-      "description": "2인용 스네이크 게임입니다.",
-      "author": "11017 송재민"
-    }
-  ],
-  "error": [
+    },
     {
       "title": "커비 슈팅",
       "description": "커비 슈팅 게임입니다.",
       "author": "10319 원도현"
-    },
+    }
+  ],
+  "etc": [
     {
       "title": "길건너 모험",
       "description": "크로시 로드 게임입니다.",
       "author": "20705 김민성"
     }
+  ],
+  "error": [
+
   ]
 }
