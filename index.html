@@ -569,10 +569,17 @@
             margin-bottom: 15px;
             border-left: 4px solid #28a745;
             transition: transform 0.2s;
+            position: relative;
         }
 
         .reward-item:hover {
             transform: translateX(5px);
+        }
+
+        .reward-item.claimed {
+            background: #e9ecef;
+            border-left-color: #6c757d;
+            opacity: 0.8;
         }
 
         .reward-item-header {
@@ -606,6 +613,31 @@
         .reward-date {
             font-size: 0.85rem;
             color: #999;
+        }
+
+        .reward-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .reward-status.claimed {
+            background: #6c757d;
+            color: white;
+        }
+
+        .reward-status.unclaimed {
+            background: #28a745;
+            color: white;
+        }
+
+        .claimed-date {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 5px;
         }
 
         .no-rewards {
@@ -995,7 +1027,7 @@
                     
                     data.rewards.forEach(reward => {
                         const rewardItem = document.createElement('div');
-                        rewardItem.className = 'reward-item';
+                        rewardItem.className = reward.claimed ? 'reward-item claimed' : 'reward-item';
                         
                         const earnedDate = new Date(reward.earnedAt);
                         const dateString = earnedDate.toLocaleDateString('ko-KR', {
@@ -1006,13 +1038,32 @@
                             minute: '2-digit'
                         });
 
+                        let claimedInfo = '';
+                        if (reward.claimed && reward.claimedAt) {
+                            const claimedDate = new Date(reward.claimedAt);
+                            const claimedString = claimedDate.toLocaleDateString('ko-KR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            claimedInfo = `<div class="claimed-date">수령일: ${claimedString}</div>`;
+                        }
+
+                        const statusBadge = reward.claimed 
+                            ? '<div class="reward-status claimed">✅ 수령완료</div>'
+                            : '<div class="reward-status unclaimed">⏳ 수령대기</div>';
+
                         rewardItem.innerHTML = `
                             <div class="reward-item-header">
-                                <div class="reward-icon">🍬</div>
+                                <div class="reward-icon">${reward.claimed ? '✅' : '🍬'}</div>
                                 <div class="reward-details">
                                     <div class="reward-title">${reward.title}</div>
                                     <div class="reward-description">${reward.description}</div>
                                     <div class="reward-date">획득일: ${dateString}</div>
+                                    ${claimedInfo}
+                                    ${statusBadge}
                                 </div>
                             </div>
                         `;
