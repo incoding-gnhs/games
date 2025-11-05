@@ -443,12 +443,40 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       isMe: r.studentId === studentId
     }));
 
-    // 상위 10% 체크 및 보상 지급
+    // 보상 지급 체크
     let rewardEarned = false;
+    let firstGameReward = false;
     const topPercentile = 100 - parseFloat(percentile); // 상위 몇 %인지 계산
     
     console.log(`학생 ${studentId} - 순위: ${myRank}/${totalPlayers}, percentile: ${percentile}%, 상위: ${topPercentile}%`);
     
+    // 첫 게임 클리어 보상 체크
+    const totalGamesCleared = await Score.distinct('gameName', { studentId }).then(games => games.length);
+    console.log(`학생 ${studentId}의 클리어한 게임 수: ${totalGamesCleared}`);
+    
+    if (totalGamesCleared === 1) {
+      // 처음 게임을 클리어한 경우
+      const existingFirstGameReward = await Reward.findOne({
+        studentId,
+        title: '기타 랜덤 간식'
+      });
+      
+      if (!existingFirstGameReward) {
+        console.log('🎉 첫 게임 클리어! 특별 보상 지급');
+        const reward = new Reward({
+          studentId,
+          title: '기타 랜덤 간식',
+          description: '발표회 현장(AI융합실)에 선착순으로 먼저오는 사람이 수령합니다.',
+          claimed: false
+        });
+        await reward.save();
+        firstGameReward = true;
+        rewardEarned = true;
+        console.log('첫 게임 클리어 보상 생성 완료!', reward);
+      }
+    }
+    
+    // 상위 10% 보상 체크
     if (topPercentile <= 10) {
       console.log(`상위 10% 달성! 보상 지급 시도...`);
       
@@ -499,6 +527,7 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       percentile: parseFloat(percentile),
       nearbyRankings,
       rewardEarned,
+      firstGameReward,
       topPercentile: topPercentile.toFixed(1)
     });
 

@@ -532,6 +532,18 @@
         </div>
     </div>
 
+    <!-- 첫 게임 클리어 보상 모달 -->
+    <div id="firstGameRewardModal" class="reward-modal">
+        <div class="reward-content">
+            <div class="reward-icon">🎉</div>
+            <div class="reward-title">첫 게임 클리어!</div>
+            <div class="reward-message">축하합니다! 특별 보상을 획득했습니다!</div>
+            <div class="reward-badge">기타 랜덤 간식</div>
+            <div class="reward-description">발표회 현장(AI융합실)에 선착순으로 먼저오는 사람이 수령합니다.</div>
+            <button class="reward-close-btn" onclick="closeFirstGameRewardModal()">확인</button>
+        </div>
+    </div>
+
     <script>
         // URL 파라미터에서 게임 정보 가져오기 (base64 디코딩)
         function getUrlParams() {
@@ -703,7 +715,9 @@
             document.getElementById('resultSection').style.display = 'block';
 
             // 보상 획득 체크 및 모달 표시
-            if (data.rewardEarned) {
+            if (data.firstGameReward) {
+                showFirstGameRewardModal();
+            } else if (data.rewardEarned) {
                 showRewardModal(params.gameName);
             }
         }
@@ -716,9 +730,21 @@
             modal.classList.add('show');
         }
 
+        // 첫 게임 클리어 보상 모달 표시
+        function showFirstGameRewardModal() {
+            const modal = document.getElementById('firstGameRewardModal');
+            modal.classList.add('show');
+        }
+
         // 보상 모달 닫기
         function closeRewardModal() {
             const modal = document.getElementById('rewardModal');
+            modal.classList.remove('show');
+        }
+
+        // 첫 게임 보상 모달 닫기
+        function closeFirstGameRewardModal() {
+            const modal = document.getElementById('firstGameRewardModal');
             modal.classList.remove('show');
         }
 
