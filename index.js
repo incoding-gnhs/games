@@ -415,10 +415,6 @@ app.post('/api/games/:gameName/submit-score', async (req, res) => {
       userMap[user.studentId] = user.name;
     });
 
-    console.log('학생 ID 목록:', studentIds);
-    console.log('조회된 사용자:', users);
-    console.log('사용자 맵:', userMap);
-
     // 현재 학생의 최고 점수
     const myBestScore = await Score.findOne({ gameName, studentId })
       .sort({ score: -1 })
