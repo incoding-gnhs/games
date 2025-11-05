@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보상 수령</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .auth-section {
+            display: block;
+        }
+
+        .main-section {
+            display: none;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .user-info h2 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .user-info p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .rewards-section {
+            margin-top: 30px;
+        }
+
+        .rewards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .rewards-header h3 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .claim-all-btn {
+            width: auto;
+            padding: 10px 20px;
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .reward-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .reward-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .reward-item.claimed {
+            opacity: 0.5;
+            background: #e9ecef;
+        }
+
+        .reward-info {
+            flex: 1;
+        }
+
+        .reward-title {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .reward-item.claimed .reward-title {
+            color: #999;
+        }
+
+        .reward-description {
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .reward-date {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .reward-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-badge.claimed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.unclaimed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .claim-btn {
+            width: auto;
+            padding: 10px 25px;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .reward-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .reward-status {
+                margin-top: 15px;
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .rewards-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .claim-all-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 비밀번호 인증 섹션 -->
+        <div class="auth-section" id="authSection">
+            <h1>🎁 보상 수령</h1>
+            <div class="error-message" id="authError"></div>
+            <div class="input-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요" />
+            </div>
+            <button onclick="authenticate()">확인</button>
+        </div>
+
+        <!-- 메인 섹션 -->
+        <div class="main-section" id="mainSection">
+            <h1>🎁 보상 수령</h1>
+            
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- 학번 입력 -->
+            <div id="inputSection">
+                <div class="input-group">
+                    <label for="studentId">학번을 입력해 주세요.</label>
+                    <input type="text" id="studentId" placeholder="학번 5자리 입력" maxlength="5" />
+                </div>
+                <button onclick="searchStudent()">조회</button>
+            </div>
+
+            <!-- 사용자 정보 및 보상 목록 -->
+            <div id="rewardsSection" style="display: none;">
+                <div class="user-info">
+                    <h2 id="userName"></h2>
+                    <p id="userStudentId"></p>
+                </div>
+
+                <div class="rewards-section">
+                    <div class="rewards-header">
+                        <h3>보상 목록</h3>
+                        <button class="claim-all-btn" id="claimAllBtn" onclick="claimAll()" style="display: none;">
+                            전체 수령
+                        </button>
+                    </div>
+                    <div class="reward-list" id="rewardList"></div>
+                </div>
+
+                <button onclick="searchAnother()">다른 학생 조회</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStudentId = null;
+        let currentRewards = [];
+
+        // 비밀번호 인증
+        function authenticate() {
+            const password = document.getElementById('password').value;
+            const authError = document.getElementById('authError');
+
+            if (password === 'incoding') {
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+                sessionStorage.setItem('authenticated', 'true');
+            } else {
+                authError.textContent = '비밀번호가 올바르지 않습니다.';
+                authError.style.display = 'block';
+                setTimeout(() => {
+                    authError.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 엔터키로 비밀번호 입력
+        document.getElementById('password')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') authenticate();
+        });
+
+        // 엔터키로 학번 검색
+        document.getElementById('studentId')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchStudent();
+        });
+
+        // 페이지 로드 시 인증 확인
+        window.addEventListener('load', () => {
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+            }
+        });
+
+        // 학생 조회
+        async function searchStudent() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const errorMsg = document.getElementById('errorMessage');
+            
+            if (!studentId) {
+                showError('학번을 입력해주세요.');
+                return;
+            }
+
+            if (!/^\d{5}$/.test(studentId)) {
+                showError('학번은 5자리 숫자로 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/claim/user/${studentId}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || '사용자를 찾을 수 없습니다.');
+                    return;
+                }
+
+                currentStudentId = studentId;
+                currentRewards = data.rewards;
+
+                // 사용자 정보 표시
+                document.getElementById('userName').textContent = data.user.name;
+                document.getElementById('userStudentId').textContent = `학번: ${data.user.studentId}`;
+
+                // 보상 목록 표시
+                displayRewards(data.rewards);
+
+                // 섹션 전환
+                document.getElementById('inputSection').style.display = 'none';
+                document.getElementById('rewardsSection').style.display = 'block';
+            } catch (error) {
+                console.error('조회 오류:', error);
+                showError('서버 오류가 발생했습니다.');
+            }
+        }
+
+        // 보상 목록 표시
+        function displayRewards(rewards) {
+            const rewardList = document.getElementById('rewardList');
+            const claimAllBtn = document.getElementById('claimAllBtn');
+            
+            if (!rewards || rewards.length === 0) {
+                rewardList.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <h3>받을 수 있는 보상이 없습니다.</h3>
+                    </div>
+                `;
+                claimAllBtn.style.display = 'none';
+                return;
+            }
+
+            // 미수령 보상이 있는지 확인
+            const hasUnclaimed = rewards.some(r => !r.claimed);
+            claimAllBtn.style.display = hasUnclaimed ? 'block' : 'none';
+
+            rewardList.innerHTML = rewards.map(reward => {
+                const earnedDate = new Date(reward.earnedAt).toLocaleDateString('ko-KR');
+                const claimedDate = reward.claimedAt ? new Date(reward.claimedAt).toLocaleDateString('ko-KR') : '';
+                
+                return `
+                    <div class="reward-item ${reward.claimed ? 'claimed' : ''}">
+                        <div class="reward-info">
+                            <div class="reward-title">${reward.title}</div>
+                            ${reward.description ? `<div class="reward-description">${reward.description}</div>` : ''}
+                            <div class="reward-date">
+                                획득: ${earnedDate}
+                                ${reward.claimed ? ` | 수령: ${claimedDate}` : ''}
+                            </div>
+                        </div>
+                        <div class="reward-status">
+                            ${reward.claimed 
+                                ? '<span class="status-badge claimed">수령 완료</span>' 
+                                : `<button class="claim-btn" onclick="claimReward('${reward._id}')">수령</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 개별 보상 수령
+        async function claimReward(rewardId) {
+            try {
+                const response = await fetch(`/api/claim/reward/${rewardId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || '보상 수령에 실패했습니다.');
+                    return;
+                }
+
+                showSuccess('보상을 수령했습니다!');
+                
+                // 보상 목록 새로고침
+                await searchStudent();
+            } catch (error) {
+                console.error('보상 수령 오류:', error);
+                showError('서버 오류가 발생했습니다.');
+            }
+        }
+
+        // 전체 보상 수령
+        async function claimAll() {
+            if (!currentStudentId) return;
+
+            if (!confirm('미수령 보상을 모두 수령하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/claim/all/${currentStudentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || '전체 수령에 실패했습니다.');
+                    return;
+                }
+
+                showSuccess(`${data.claimedCount}개의 보상을 수령했습니다!`);
+                
+                // 보상 목록 새로고침
+                await searchStudent();
+            } catch (error) {
+                console.error('전체 수령 오류:', error);
+                showError('서버 오류가 발생했습니다.');
+            }
+        }
+
+        // 다른 학생 조회
+        function searchAnother() {
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('rewardsSection').style.display = 'none';
+            document.getElementById('studentId').value = '';
+            currentStudentId = null;
+            currentRewards = [];
+            hideMessages();
+        }
+
+        // 에러 메시지 표시
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            setTimeout(() => {
+                errorMsg.style.display = 'none';
+            }, 5000);
+        }
+
+        // 성공 메시지 표시
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+            setTimeout(() => {
+                successMsg.style.display = 'none';
+            }, 3000);
+        }
+
+        // 메시지 숨기기
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

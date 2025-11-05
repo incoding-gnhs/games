@@ -863,6 +863,121 @@ app.put('/api/rewards/:rewardId/claim', async (req, res) => {
   }
 });
 
+// ==================== 보상 수령 관련 API ====================
+
+// 학번으로 사용자 정보 및 보상 조회
+app.get('/api/claim/user/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    // 학번 형식 검증
+    if (!/^\d{5}$/.test(studentId)) {
+      return res.status(400).json({ error: '학번은 5자리 숫자로 입력해주세요.' });
+    }
+
+    // 사용자 조회
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학번의 사용자를 찾을 수 없습니다.' });
+    }
+
+    // 보상 조회 (최신순 정렬)
+    const rewards = await Reward.find({ studentId }).sort({ earnedAt: -1 });
+
+    res.json({
+      success: true,
+      user: {
+        name: user.name,
+        studentId: user.studentId
+      },
+      rewards
+    });
+  } catch (error) {
+    console.error('사용자 정보 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 개별 보상 수령
+app.post('/api/claim/reward/:rewardId', async (req, res) => {
+  try {
+    const { rewardId } = req.params;
+
+    const reward = await Reward.findById(rewardId);
+    
+    if (!reward) {
+      return res.status(404).json({ error: '보상을 찾을 수 없습니다.' });
+    }
+
+    if (reward.claimed) {
+      return res.status(400).json({ error: '이미 수령한 보상입니다.' });
+    }
+
+    reward.claimed = true;
+    reward.claimedAt = new Date();
+    await reward.save();
+
+    res.json({
+      success: true,
+      message: '보상을 수령했습니다.',
+      reward
+    });
+  } catch (error) {
+    console.error('보상 수령 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 전체 보상 수령
+app.post('/api/claim/all/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    // 학번 형식 검증
+    if (!/^\d{5}$/.test(studentId)) {
+      return res.status(400).json({ error: '학번은 5자리 숫자로 입력해주세요.' });
+    }
+
+    // 사용자 확인
+    const user = await User.findOne({ studentId });
+    
+    if (!user) {
+      return res.status(404).json({ error: '해당 학번의 사용자를 찾을 수 없습니다.' });
+    }
+
+    // 미수령 보상 조회 및 업데이트
+    const result = await Reward.updateMany(
+      { studentId, claimed: false },
+      { 
+        $set: { 
+          claimed: true,
+          claimedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '모든 보상을 수령했습니다.',
+      claimedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('전체 보상 수령 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// /:pageNumber보다 먼저 정의 (라우트 우선순위)
+app.get('/claime', (req, res) => {
+  const filePath = path.join(__dirname, 'public', 'claim-rewards.html');
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).send('페이지를 찾을 수 없습니다.');
+    }
+  });
+});
+
 app.get('/:pageNumber', (req, res) => {
   const page = req.params.pageNumber;
   const filePath = path.join(__dirname, 'public', `${page}.html`);
